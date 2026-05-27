@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><title>西蒙记忆</title>
+<style>*{margin:0;padding:0;box-sizing:border-box}body{background:#111;display:flex;justify-content:center;align-items:center;min-height:100vh;font-family:sans-serif;color:#fff}
+.game{text-align:center}.grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;width:200px;margin:16px auto}
+.btn{height:80px;border-radius:12px;cursor:pointer;opacity:.5;transition:.15s;border:none}.btn.active{opacity:1!important;transform:scale(1.05)}.btn.green{background:#2ecc71}.btn.red{background:#e74c3c}.btn.blue{background:#3498db}.btn.yellow{background:#f1c40f}
+.info{font-size:13px;color:#9898b8;margin:8px}.controls button{padding:6px 16px;border:none;border-radius:4px;cursor:pointer;background:#6c5ce7;color:#fff;font-size:13px}
+</style></head>
+<body><div class="game">
+<div class="info" id="status">按开始按钮</div>
+<div class="grid">
+<button class="btn green" id="g0"></button>
+<button class="btn red" id="g1"></button>
+<button class="btn blue" id="g2"></button>
+<button class="btn yellow" id="g3"></button>
+</div>
+<div class="info">回合: <b id="round">0</b> | 最高: <b id="high">0</b></div>
+<div class="controls"><button onclick="startGame()">开始</button></div>
+</div>
+<script>
+let sequence=[],playerIdx=0,playerTurn=false,gameOver=false,high=0,lock=false;
+const COLORS=['green','red','blue','yellow'];
+const btns={};
+COLORS.forEach((c,i)=>{btns[i]=document.getElementById('g'+i)});
+
+function startGame(){sequence=[];playerIdx=0;gameOver=false;nextRound()}
+function nextRound(){playerTurn=false;playerIdx=0;sequence.push(Math.floor(Math.random()*4));document.getElementById('round').textContent=sequence.length;playSequence()}
+function playSequence(){lock=true;let i=0;const iv=setInterval(()=>{if(i>0)btns[sequence[i-1]].classList.remove('active');if(i>=sequence.length){clearInterval(iv);lock=false;playerTurn=true;document.getElementById('status').textContent='你的回合，按顺序点击';return}btns[sequence[i]].classList.add('active');setTimeout(()=>btns[sequence[i]].classList.remove('active'),300);i++},600)}
+
+function handleClick(idx){if(lock||!playerTurn||gameOver)return;btns[idx].classList.add('active');setTimeout(()=>btns[idx].classList.remove('active'),200);if(idx!==sequence[playerIdx]){gameOver=true;document.getElementById('status').textContent='💥 错了! 重新开始';high=Math.max(high,sequence.length-1);document.getElementById('high').textContent=high;return}playerIdx++;if(playerIdx===sequence.length){document.getElementById('status').textContent='🎉 正确!';setTimeout(()=>nextRound(),600)}}
+
+COLORS.forEach((c,i)=>{document.getElementById('g'+i).onclick=()=>handleClick(i)});
+</script>
+</body></html>

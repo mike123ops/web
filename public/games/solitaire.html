@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><title>纸牌接龙</title>
+<style>*{margin:0;padding:0;box-sizing:border-box}body{background:#1a5e2a;display:flex;justify-content:center;align-items:center;min-height:100vh;font-family:sans-serif;color:#fff}
+.game{text-align:center}.table{display:flex;gap:5px;padding:8px;flex-wrap:wrap;justify-content:center;max-width:620px;margin:0 auto}
+.col{min-width:70px;min-height:100px;background:rgba(0,0,0,.15);border-radius:6px;padding:3px;border:1px dashed rgba(255,255,255,.1);position:relative}.card{width:64px;height:88px;background:#fff;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:bold;cursor:pointer;margin-bottom:-76px;position:relative;box-shadow:0 1px 3px rgba(0,0,0,.2);transition:.1s}.card:last-child{margin-bottom:0}.card.red{color:#e74c3c}.card.black{color:#222}.card.face-down{background:#6c5ce7;color:transparent;user-select:none}.card.selected{box-shadow:0 0 0 3px #f1c40f}.foundation{width:64px;height:88px;background:rgba(0,0,0,.1);border-radius:5px;border:1px dashed rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;font-size:13px}
+.top{display:flex;gap:16px;justify-content:center;margin:4px 0 12px}.stock{width:64px;height:88px;background:#6c5ce7;border-radius:5px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:20px}.info{font-size:13px;margin:8px;color:rgba(255,255,255,.7)}.controls button{padding:5px 12px;border:none;border-radius:4px;cursor:pointer;background:#6c5ce7;color:#fff;font-size:12px;margin:2px}
+</style></head>
+<body><div class="game">
+<div class="info">🃏 纸牌接龙 | 把牌移到右上角</div>
+<div id="top" class="top"></div>
+<div id="table" class="table"></div>
+<div class="controls"><button onclick="initGame()">新游戏</button></div>
+</div>
+<script>
+const SUITS=['♠','♥','♣','♦'];const RANKS=['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
+let table=[],foundations=[],stock=[],waste=[],selected=null;
+
+function createDeck(){const d=[];for(const s of SUITS)for(let i=0;i<RANKS.length;i++)d.push({suit:s,rank:i,up:false});return d}
+
+function initGame(){
+    const deck=createDeck();for(let i=deck.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[deck[i],deck[j]]=[deck[j],deck[i]]}
+    table=[];let idx=0;
+    for(let i=1;i<=7;i++){const col=[];for(let j=0;j<i;j++){col.push({...deck[idx],up:j===i-1});idx++}table.push(col)}
+    stock=deck.slice(idx);waste=[];foundations=[[],[],[],[]];selected=null;render()
+}
+
+function canPlaceOnTable(card,target){return target&&target.suit&&target.rank===card.rank+1&&((card.suit==='♥'||card.suit==='♦')!==(target.suit==='♥'||target.suit==='♦'))}
+function canPlaceOnFoundation(card,f){return f.length===0?card.rank===0:card.suit===f[0].suit&&card.rank===f[0].rank+1}
+
+function clickCol(ci,ci2){
+    if(selected){const card=selected.card;const source=selected.source;if(source==='waste'){if(table[ci].length===0&&card.rank===12){table[ci].push(card);waste.pop()}else if(table[ci].length>0&&canPlaceOnTable(card,table[ci][table[ci].length-1])){table[ci].push(card);waste.pop()}}else if(source==='col'){const arr=table[source.idx].splice(ci2);if(table[source.idx].length>0)table[source.idx][table[source.idx].length-1].up=true;if(table[ci].length===0&&arr[0].rank===12){table[ci].push(...arr);}else if(table[ci].length>0&&canPlaceOnTable(arr[0],table[ci][table[ci].length-1])){table[ci].push(...arr);}else{table[source.idx].push(...arr);}}selected=null;render();return}
+    if(ci2>=0&&ci2<table[ci].length&&table[ci][ci2].up){selected={card:table[ci][ci2],source:{type:'col',idx:ci},idx:ci2};render();return}
+    if(ci2>=0&&table[ci][ci2].up&&ci2===table[ci].length-1){for(let fi=0;fi<4;fi++){if(canPlaceOnFoundation(table[ci][ci2],foundations[fi])){foundations[fi].push(table[ci].pop());if(table[ci].length>0)table[ci][table[ci].length-1].up=true;selected=null;render();return}}}
+}
+
+function clickStock(){
+    if(stock.length===0){stock=[...waste].reverse();stock.forEach(c=>c.up=false);waste=[]}else{waste.push({...stock.pop(),up:true})}selected=null;render()
+}
+
+function clickWaste(){
+    if(waste.length===0)return;
+    if(selected){clickCol(0,-1);return}
+    const card=waste[waste.length-1];
+    for(let fi=0;fi<4;fi++){if(canPlaceOnFoundation(card,foundations[fi])){foundations[fi].push(waste.pop());selected=null;render();return}}
+    selected={card,wasteIdx:waste.length-1,source:'waste'};render()
+}
+
+function clickFoundation(fi){if(selected&&selected.source==='waste'){const card=selected.card;if(canPlaceOnFoundation(card,foundations[fi])){foundations[fi].push(card);waste.pop();selected=null;render()}}else if(selected&&selected.source==='col'){const card=selected.card;const arr=table[selected.source.idx].splice(selected.idx);if(table[selected.source.idx].length>0)table[selected.source.idx][table[selected.source.idx].length-1].up=true;if(canPlaceOnFoundation(arr[0],foundations[fi])){foundations[fi].push(arr[0]);selected=null;render()}else{table[selected.source.idx].push(...arr);selected=null;render()}}}
+
+function render(){
+    const t=document.getElementById('table');t.innerHTML='';
+    for(let i=0;i<7;i++){const col=document.createElement('div');col.className='col';
+        const cards=table[i]||[];
+        cards.forEach((c,ci)=>{const d=document.createElement('div');d.className='card '+(c.up?(c.suit==='♥'||c.suit==='♦'?'red':'black'):'face-down');
+            if(c.up)d.textContent=c.suit+RANKS[c.rank];if(selected&&selected.source?.type==='col'&&selected.source.idx===i&&selected.idx===ci)d.classList.add('selected');
+            d.onclick=(e)=>{e.stopPropagation();clickCol(i,ci)};col.appendChild(d)});
+        col.onclick=()=>clickCol(i,-1);t.appendChild(col)}
+
+    const tp=document.getElementById('top');tp.innerHTML='';
+    const st=document.createElement('div');st.className='stock';st.textContent=stock.length>0?'🂠':'';st.onclick=clickStock;tp.appendChild(st);
+    const ws=document.createElement('div');ws.className='stock';ws.textContent=waste.length>0?(waste[waste.length-1].suit+RANKS[waste[waste.length-1].rank]):'';ws.style.background=waste.length>0?'#fff':'rgba(0,0,0,.1)';ws.style.color=waste.length>0?((waste[waste.length-1].suit==='♥'||waste[waste.length-1].suit==='♦')?'#e74c3c':'#222'):'';ws.onclick=clickWaste;if(selected&&selected.source==='waste')ws.style.boxShadow='0 0 0 3px #f1c40f';tp.appendChild(ws);
+    foundations.forEach((f,fi)=>{const d=document.createElement('div');d.className='stock';d.textContent=f.length>0?f[f.length-1].suit+RANKS[f[f.length-1].rank]:'';d.style.background=f.length>0?'#fff':'rgba(0,0,0,.1)';d.style.color=f.length>0?((f[f.length-1].suit==='♥'||f[f.length-1].suit==='♦')?'#e74c3c':'#222'):'';d.onclick=()=>clickFoundation(fi);tp.appendChild(d)});
+}
+
+initGame();
+</script>
+</body></html>

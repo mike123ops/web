@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><title>打地鼠</title>
+<style>*{margin:0;padding:0;box-sizing:border-box}body{background:#111;display:flex;justify-content:center;align-items:center;min-height:100vh;font-family:sans-serif;color:#fff}
+.game{text-align:center}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;width:260px;margin:16px auto}
+.hole{height:80px;background:#4a3a2a;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:36px;transition:.1s;border:3px solid #5a4a3a}
+.hole.up{background:#6c5ce7;border-color:#a29bfe;transform:scale(1.05)}.hole.hit{background:#e74c3c!important}
+.info{font-size:13px;color:#9898b8;margin:8px}.controls button{padding:6px 16px;border:none;border-radius:4px;cursor:pointer;background:#6c5ce7;color:#fff;font-size:13px}
+</style></head>
+<body><div class="game">
+<div class="info">🔨 打地鼠 | 分数: <b id="score">0</b> | 时间: <b id="timer">30</b>s</div>
+<div id="grid" class="grid"></div>
+<div class="controls"><button onclick="startGame()">开始游戏</button></div>
+</div>
+<script>
+let score,timeLeft,moleInterval,timerInterval,gameActive=false;
+function startGame(){
+    score=0;timeLeft=30;gameActive=true;
+    document.getElementById('score').textContent='0';document.getElementById('timer').textContent='30';
+    if(moleInterval)clearInterval(moleInterval);if(timerInterval)clearInterval(timerInterval);
+    showMole();moleInterval=setInterval(showMole,800);
+    timerInterval=setInterval(()=>{timeLeft--;document.getElementById('timer').textContent=timeLeft;if(timeLeft<=0){endGame()}},1000)
+}
+function endGame(){
+    gameActive=false;clearInterval(moleInterval);clearInterval(timerInterval);
+    const holes=document.querySelectorAll('.hole');holes.forEach(h=>h.classList.remove('up'));
+    alert('⏰ 时间到！得分: '+score)
+}
+function showMole(){
+    if(!gameActive)return;
+    const holes=document.querySelectorAll('.hole');
+    holes.forEach(h=>{h.classList.remove('up');h.textContent=''});
+    const idx=Math.floor(Math.random()*9);
+    holes[idx].classList.add('up');holes[idx].textContent='🐭';
+}
+function whack(el,idx){
+    if(!gameActive)return;
+    if(el.classList.contains('up')){score++;document.getElementById('score').textContent=score;el.classList.add('hit');el.textContent='💥';setTimeout(()=>{el.classList.remove('hit','up');el.textContent=''},200)}
+}
+function renderGrid(){
+    const g=document.getElementById('grid');g.innerHTML='';
+    for(let i=0;i<9;i++){const d=document.createElement('div');d.className='hole';d.onclick=()=>whack(d,i);g.appendChild(d)}
+}
+renderGrid();
+</script>
+</body></html>

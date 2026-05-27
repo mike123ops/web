@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"><title>2048</title>
+<style>*{margin:0;padding:0;box-sizing:border-box}body{background:#111;display:flex;justify-content:center;align-items:center;min-height:100vh;font-family:sans-serif;color:#fff}
+.game{text-align:center}.board{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;width:300px;margin:16px auto}
+.cell{height:68px;background:rgba(255,255,255,.06);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:bold;transition:.15s}
+.cell.t2{background:#eee4da;color:#776e65}.cell.t4{background:#ede0c8;color:#776e65}.cell.t8{background:#f2b179;color:#fff}
+.cell.t16{background:#f59563;color:#fff}.cell.t32{background:#f67c5f;color:#fff}.cell.t64{background:#f65e3b;color:#fff}
+.cell.t128{background:#edcf72;color:#fff}.cell.t256{background:#edcc61;color:#fff}.cell.t512{background:#edc850;color:#fff}
+.cell.t1024{background:#edc53f;color:#fff;font-size:20px}.cell.t2048{background:#edc22e;color:#fff;font-size:20px}
+.controls{margin-top:12px}.controls button{padding:6px 16px;border:none;border-radius:4px;cursor:pointer;background:#6c5ce7;color:#fff;font-size:13px;margin:0 4px}
+.info{font-size:14px;color:#9898b8}.over{position:absolute;background:rgba(0,0,0,.7);color:#fff;font-size:22px;padding:20px;border-radius:8px}
+</style></head>
+<body><div class="game">
+<div class="info" id="score">分数: 0</div>
+<div id="board" class="board"></div>
+<div class="controls">
+<button onclick="initGame()">新游戏</button>
+</div>
+</div>
+<script>
+let grid=Array(4).fill(null).map(()=>Array(4).fill(0)),score=0;
+function initGame(){grid=Array(4).fill(null).map(()=>Array(4).fill(0));score=0;addTile();addTile();render()}
+function addTile(){const empty=[];for(let r=0;r<4;r++)for(let c=0;c<4;c++)if(!grid[r][c])empty.push({r,c});if(!empty.length)return;const{ r,c}=empty[Math.floor(Math.random()*empty.length)];grid[r][c]=Math.random()<.9?2:4}
+function render(){const b=document.getElementById('board');b.innerHTML='';let gameOver=true;for(let r=0;r<4;r++)for(let c=0;c<4;c++){const v=grid[r][c];const d=document.createElement('div');d.className='cell'+(v?' t'+v:'');d.textContent=v||'';b.appendChild(d);if(!v)gameOver=false}document.getElementById('score').textContent='分数: '+score;if(gameOver&&!canMove()){setTimeout(()=>alert('游戏结束! 分数: '+score),100)}}
+function canMove(){for(let r=0;r<4;r++)for(let c=0;c<4;c++){if(!grid[r][c])return true;if(c<3&&grid[r][c]===grid[r][c+1])return true;if(r<3&&grid[r][c]===grid[r+1][c])return true}return false}
+function slideRow(row){let arr=row.filter(v=>v);let merged=[];let scored=false;for(let i=0;i<arr.length;i++){if(i+1<arr.length&&arr[i]===arr[i+1]){merged.push(arr[i]*2);score+=arr[i]*2;i++;scored=true}else{merged.push(arr[i])}}while(merged.length<4)merged.push(0);return merged}
+function move(d){let moved=false;const old=JSON.stringify(grid);if(d==='left')for(let r=0;r<4;r++)grid[r]=slideRow(grid[r]);else if(d==='right')for(let r=0;r<4;r++)grid[r]=slideRow(grid[r].reverse()).reverse();else if(d==='up')for(let c=0;c<4;c++){const col=[grid[0][c],grid[1][c],grid[2][c],grid[3][c]];const sl=slideRow(col);for(let r=0;r<4;r++)grid[r][c]=sl[r]}else if(d==='down')for(let c=0;c<4;c++){const col=[grid[3][c],grid[2][c],grid[1][c],grid[0][c]];const sl=slideRow(col);for(let r=0;r<4;r++)grid[3-r][c]=sl[r]}if(JSON.stringify(grid)!==old){addTile();render()}}
+document.onkeydown=e=>{if(e.key.startsWith('Arrow')){e.preventDefault();move(e.key.replace('Arrow','').toLowerCase())}};
+initGame();
+</script>
+</body>
+</html>

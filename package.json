@@ -1,0 +1,17 @@
+{
+  "name": "cloud-chat-server",
+  "version": "2.0.0",
+  "description": "云聊天多功能服务器 (Chat + Games + BIFE Defense)",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": ["chat", "websocket", "games"],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^5.2.1",
+    "ws": "^8.21.0"
+  }
+}

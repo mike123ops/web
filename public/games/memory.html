@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><title>记忆翻牌</title>
+<style>*{margin:0;padding:0;box-sizing:border-box}body{background:#111;display:flex;justify-content:center;align-items:center;min-height:100vh;font-family:sans-serif;color:#fff}
+.game{text-align:center}.board{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;width:360px;margin:12px auto}
+.card{height:80px;background:#6c5ce7;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:32px;cursor:pointer;transition:.2s;transform:rotateY(0)}
+.card.flipped{background:#2a2d4a;transform:rotateY(180deg)}.card.matched{background:#00b894;transform:rotateY(180deg);cursor:default}
+.info{font-size:13px;color:#9898b8;margin:8px}.controls button{padding:6px 16px;border:none;border-radius:4px;cursor:pointer;background:#6c5ce7;color:#fff;font-size:13px}
+</style></head>
+<body><div class="game">
+<div class="info">翻牌配对 | 步数: <b id="moves">0</b> | 配对: <b id="pairs">0</b>/8</div>
+<div id="board" class="board"></div>
+<div class="controls"><button onclick="initGame()">重新洗牌</button></div>
+</div>
+<script>
+const EMOJIS=['🐶','🐱','🐼','🐨','🦊','🐸','🐵','🐰'];let cards,flipped,matched,moves,pairs,lock;
+function initGame(){
+    cards=[...EMOJIS,...EMOJIS];for(let i=cards.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[cards[i],cards[j]]=[cards[j],cards[i]]}
+    flipped=[];matched=[];moves=0;pairs=0;lock=false;
+    document.getElementById('moves').textContent='0';document.getElementById('pairs').textContent='0';
+    render()
+}
+function flipCard(idx){
+    if(lock||matched.includes(idx)||flipped.includes(idx))return;
+    flipped.push(idx);moves++;document.getElementById('moves').textContent=moves;render();
+    if(flipped.length===2){
+        lock=true;
+        if(cards[flipped[0]]===cards[flipped[1]]){
+            matched.push(flipped[0],flipped[1]);pairs++;document.getElementById('pairs').textContent=pairs;flipped=[];lock=false;
+            if(pairs===8)setTimeout(()=>alert('🎉 恭喜完成！用了'+moves+'步'),300)
+        }else{setTimeout(()=>{flipped=[];lock=false;render()},800)}
+    }
+}
+function render(){
+    const b=document.getElementById('board');b.innerHTML='';
+    cards.forEach((c,i)=>{
+        const d=document.createElement('div');d.className='card';
+        if(matched.includes(i)||flipped.includes(i)){d.classList.add('flipped');d.textContent=c;if(matched.includes(i))d.classList.add('matched')}
+        d.onclick=()=>flipCard(i);b.appendChild(d)
+    })
+}
+initGame();
+</script>
+</body></html>

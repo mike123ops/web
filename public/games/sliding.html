@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><title>滑块拼图</title>
+<style>*{margin:0;padding:0;box-sizing:border-box}body{background:#111;display:flex;justify-content:center;align-items:center;min-height:100vh;font-family:sans-serif;color:#fff}
+.game{text-align:center}.board{display:grid;grid-template-columns:repeat(4,1fr);gap:3px;width:300px;margin:12px auto;background:#2a2d4a;padding:3px;border-radius:8px}
+.tile{height:70px;background:#6c5ce7;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:bold;cursor:pointer;transition:.15s;color:#fff}
+.tile:hover{background:#a29bfe}.tile.empty{background:transparent;cursor:default}
+.info{font-size:13px;color:#9898b8;margin:8px}.controls button{padding:6px 16px;border:none;border-radius:4px;cursor:pointer;background:#6c5ce7;color:#fff;font-size:13px}
+</style></head>
+<body><div class="game">
+<div class="info">将数字按顺序排列 | 步数: <b id="moves">0</b></div>
+<div id="board" class="board"></div>
+<div class="controls"><button onclick="initGame()">打乱重来</button></div>
+</div>
+<script>
+const SIZE=4;let board,moves,emptyPos;
+function initGame(){
+    board=Array.from({length:SIZE*SIZE-1},(_,i)=>i+1);board.push(0);
+    emptyPos=SIZE*SIZE-1;
+    // 用合法移动打乱
+    for(let i=0;i<200;i++){
+        const neighbors=getNeighbors(emptyPos);
+        const n=neighbors[Math.floor(Math.random()*neighbors.length)];
+        board[emptyPos]=board[n];board[n]=0;emptyPos=n;
+    }
+    moves=0;document.getElementById('moves').textContent='0';render()
+}
+function getNeighbors(pos){
+    const r=Math.floor(pos/SIZE),c=pos%SIZE,res=[];
+    if(r>0)res.push(pos-SIZE);if(r<SIZE-1)res.push(pos+SIZE);
+    if(c>0)res.push(pos-1);if(c<SIZE-1)res.push(pos+1);
+    return res
+}
+function moveTile(pos){
+    if(pos===emptyPos)return;
+    const neighbors=getNeighbors(emptyPos);
+    if(!neighbors.includes(pos))return;
+    board[emptyPos]=board[pos];board[pos]=0;emptyPos=pos;
+    moves++;document.getElementById('moves').textContent=moves;render();
+    if(checkWin())setTimeout(()=>alert('🎉 拼好了！用了'+moves+'步'),200)
+}
+function checkWin(){for(let i=0;i<SIZE*SIZE-1;i++)if(board[i]!==i+1)return false;return true}
+function render(){
+    const b=document.getElementById('board');b.innerHTML='';
+    board.forEach((v,i)=>{
+        const d=document.createElement('div');d.className='tile'+(v===0?' empty':'');
+        d.textContent=v||'';d.onclick=()=>moveTile(i);b.appendChild(d)
+    })
+}
+initGame();
+</script>
+</body></html>

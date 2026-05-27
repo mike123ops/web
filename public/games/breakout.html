@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><title>打砖块</title>
+<style>*{margin:0;padding:0;box-sizing:border-box}body{background:#111;display:flex;justify-content:center;align-items:center;min-height:100vh;font-family:sans-serif;color:#fff}
+.game{text-align:center}canvas{background:#1a1a2e;border-radius:8px;display:block;margin:0 auto}
+.info{font-size:13px;color:#9898b8;margin:8px}.controls button{padding:6px 16px;border:none;border-radius:4px;cursor:pointer;background:#6c5ce7;color:#fff;font-size:13px}
+</style></head>
+<body><div class="game">
+<div class="info">🏓 打砖块 | 分数: <b id="score">0</b> | 生命: <b id="lives">3</b></div>
+<canvas id="c" width="400" height="350"></canvas>
+<div class="controls"><button onclick="initGame()">新游戏</button></div>
+</div>
+<script>
+const c=document.getElementById('c'),ctx=c.getContext('2d');
+let paddle,ball,bricks,score,lives,gameOver,timer;
+const PADDLE_W=80,PADDLE_H=10,BALL_R=6;
+
+function initGame(){
+    paddle={x:160,y:330,w:PADDLE_W,h:PADDLE_H};
+    ball={x:200,y:320,vx:3,vy:-3,r:BALL_R};
+    bricks=[];score=0;lives=3;gameOver=false;
+    document.getElementById('score').textContent='0';document.getElementById('lives').textContent='3';
+    for(let r=0;r<5;r++)for(let c=0;c<8;c++)bricks.push({x:c*50+5,y:r*20+5,w:45,h:16,alive:true});
+    if(timer)clearInterval(timer);timer=setInterval(update,16)
+}
+function update(){
+    ball.x+=ball.vx;ball.y+=ball.vy;
+    if(ball.x<BALL_R||ball.x>400-BALL_R)ball.vx*=-1;
+    if(ball.y<BALL_R)ball.vy*=-1;
+    if(ball.y>350){lives--;document.getElementById('lives').textContent=lives;if(lives<=0){gameOver=true;clearInterval(timer)}else{ball={x:200,y:320,vx:3,vy:-3,r:BALL_R}}}
+    if(ball.y+BALL_R>paddle.y&&ball.y+BALL_R<paddle.y+PADDLE_H&&ball.x>paddle.x&&ball.x<paddle.x+PADDLE_W)ball.vy*=-1;
+    for(const b of bricks){if(!b.alive)continue;if(ball.x+BALL_R>b.x&&ball.x-BALL_R<b.x+b.w&&ball.y+BALL_R>b.y&&ball.y-BALL_R<b.y+b.h){b.alive=false;ball.vy*=-1;score+=10;document.getElementById('score').textContent=score;break}}
+    if(bricks.every(b=>!b.alive)){gameOver=true;clearInterval(timer);alert('🎉 你赢了！')}
+    draw()
+}
+function draw(){
+    ctx.fillStyle='#1a1a2e';ctx.fillRect(0,0,400,350);
+    for(const b of bricks){if(b.alive){ctx.fillStyle=['#e74c3c','#e67e22','#f1c40f','#2ecc71','#3498db'][Math.floor(b.y/20)];ctx.fillRect(b.x,b.y,b.w,b.h)}}
+    ctx.fillStyle='#fff';ctx.fillRect(paddle.x,paddle.y,paddle.w,paddle.h);
+    ctx.fillStyle='#a29bfe';ctx.beginPath();ctx.arc(ball.x,ball.y,ball.r,0,2*Math.PI);ctx.fill();
+    if(gameOver){ctx.fillStyle='rgba(0,0,0,.5)';ctx.fillRect(0,0,400,350);ctx.fillStyle='#fff';ctx.font='24px sans-serif';ctx.textAlign='center';ctx.fillText('游戏结束',200,160);ctx.font='16px sans-serif';ctx.fillText('分数: '+score,200,200)}
+}
+document.onmousemove=e=>{const rect=c.getBoundingClientRect();paddle.x=Math.max(0,Math.min(400-PADDLE_W,(e.clientX-rect.left)*400/rect.width))};
+initGame();
+</script>
+</body></html>

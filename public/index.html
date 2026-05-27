@@ -1,0 +1,1637 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>云端多功能服务器</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+:root { --bg:#1a1b2e; --surface:#232540; --surface2:#2a2d4a; --border:#363a5a; --text:#e0e0f0; --text2:#9898b8; --accent:#6c5ce7; --accent2:#a29bfe; --green:#00b894; --red:#e17055; --yellow:#fdcb6e; }
+body { font-family: 'Segoe UI','Microsoft YaHei',sans-serif; background:var(--bg); color:var(--text); height:100vh; overflow:hidden; }
+
+/* 连接页 */
+#connectPage { display:flex; align-items:center; justify-content:center; height:100vh; background:linear-gradient(135deg,#1a1b2e 0%,#2d1b69 100%); }
+.connect-box { background:var(--surface); padding:40px; border-radius:16px; width:380px; box-shadow:0 20px 60px rgba(0,0,0,.5); }
+.connect-box h2 { text-align:center; margin-bottom:24px; font-size:24px; background:linear-gradient(135deg,#6c5ce7,#a29bfe); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+.connect-box label { display:block; font-size:13px; color:var(--text2); margin:12px 0 4px; }
+.connect-box input { width:100%; padding:12px 14px; background:var(--bg); border:1px solid var(--border); border-radius:8px; color:var(--text); font-size:15px; outline:none; transition:.2s; }
+.connect-box input:focus { border-color:var(--accent); }
+.connect-box .btn { width:100%; padding:12px; margin-top:20px; background:linear-gradient(135deg,#6c5ce7,#a29bfe); border:none; border-radius:8px; color:#fff; font-size:16px; cursor:pointer; transition:.2s; font-weight:600; }
+.connect-box .btn:hover { transform:translateY(-1px); box-shadow:0 8px 25px rgba(108,92,231,.4); }
+.tip { text-align:center; color:var(--text2); font-size:13px; margin-top:12px; }
+
+/* 主容器 */
+.container { display:none; height:100vh; flex-direction:column; position:relative; }
+
+/* 公告横幅 */
+.announcement-banner {
+    position: absolute; top: 0; left: 0; right: 0; z-index: 999;
+    background: linear-gradient(135deg, #f39c12, #e74c3c);
+    color: #fff; padding: 12px 20px; text-align: center;
+    font-size: 15px; font-weight: 500; border-radius: 10px 10px 0 0;
+    box-shadow: 0 4px 20px rgba(231,76,60,.4);
+    animation: slideDown .4s ease-out;
+}
+@keyframes slideDown { from { transform:translateY(-100%);opacity:0; } to { transform:translateY(0);opacity:1; } }
+.announcement-banner .ann-close {
+    position: absolute; right: 10px; top: 8px;
+    background: none; border: none; color: #fff; font-size: 20px; cursor: pointer; opacity: .7;
+}
+.announcement-banner .ann-close:hover { opacity: 1; }
+.header { background:var(--surface); border-bottom:1px solid var(--border); padding:12px 20px; display:flex; align-items:center; justify-content:space-between; flex-shrink:0; }
+.header h1 { font-size:18px; }
+.lang-btn { background:var(--surface2); border:1px solid var(--border); border-radius:6px; color:var(--text); cursor:pointer; font-size:12px; padding:4px 8px; margin-left:8px; transition:.2s; }
+.lang-btn:hover { background:var(--accent); color:#fff; }
+.status { display:flex; align-items:center; gap:8px; font-size:14px; }
+.dot { width:8px; height:8px; border-radius:50%; background:var(--green); display:inline-block; }
+.dot.off { background:#666; }
+.main { display:flex; flex:1; overflow:hidden; }
+
+/* 侧栏 */
+.sidebar { width:320px; background:var(--surface); border-right:1px solid var(--border); display:flex; flex-direction:column; flex-shrink:0; }
+.sidebar-tabs { display:flex; border-bottom:1px solid var(--border); }
+.sidebar-tab { flex:1; padding:10px; text-align:center; font-size:13px; cursor:pointer; color:var(--text2); transition:.2s; }
+.sidebar-tab.active { color:var(--accent); border-bottom:2px solid var(--accent); }
+.sidebar-panel { flex:1; overflow-y:auto; display:none; padding:12px; }
+.sidebar-panel.active { display:block; }
+.sidebar-panel .title { font-size:12px; color:var(--text2); padding:8px 4px; text-transform:uppercase; letter-spacing:1px; }
+
+/* 用户列表 */
+.user-item { padding:8px 10px; display:flex; align-items:center; gap:8px; border-radius:6px; cursor:pointer; font-size:14px; transition:.15s; }
+.user-item:hover { background:var(--surface2); }
+.user-item.me { background:rgba(108,92,231,.15); }
+.user-item .indicator { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+.user-item .status-dot { width:6px; height:6px; border-radius:50%; flex-shrink:0; }
+.user-item .status-dot.online { background:var(--green); }
+.user-item .status-dot.away { background:var(--yellow); }
+
+/* 房间面板 */
+.room-item { padding:8px 10px; border-radius:6px; cursor:pointer; font-size:14px; display:flex; align-items:center; gap:8px; transition:.15s; }
+.room-item:hover { background:var(--surface2); }
+.room-item .icon { font-size:16px; }
+.create-room { display:flex; flex-direction:column; gap:8px; margin-top:8px; }
+.create-room input { padding:10px 12px; background:var(--bg); border:1px solid var(--border); border-radius:6px; color:var(--text); font-size:14px; outline:none; }
+.create-room input:focus { border-color:var(--accent); }
+.create-room button { padding:10px 0; background:var(--accent); border:none; border-radius:6px; color:#fff; cursor:pointer; font-size:14px; font-weight:600; transition:.2s; }
+.create-room button:hover { background:var(--accent2); }
+
+/* 聊天区域 */
+.chat-area { flex:1; display:flex; flex-direction:column; }
+.messages { flex:1; overflow-y:auto; padding:16px; }
+.msg { margin-bottom:10px; animation:fadeIn .2s; display:flex; align-items:flex-end; gap:6px; }
+.msg.self { justify-content:flex-end; }
+.msg.other { justify-content:flex-start; }
+.msg.self .text { background:var(--accent); color:#fff; padding:8px 14px; border-radius:16px 16px 4px 16px; max-width:70%; word-break:break-word; font-size:14px; }
+.msg.other .text { background:var(--surface2); color:var(--text); padding:8px 14px; border-radius:16px 16px 16px 4px; max-width:70%; word-break:break-word; font-size:14px; }
+@keyframes fadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+.msg .time { font-size:11px; color:var(--text2); margin:0 8px; }
+.msg .name { font-weight:600; font-size:13px; margin-right:8px; }
+.msg .text { font-size:14px; word-break:break-word; }
+.msg.system .text { color:var(--text2); font-style:italic; font-size:13px; }
+.msg.private { background:rgba(253,203,110,.08); padding:8px 12px; border-radius:8px; border-left:3px solid var(--yellow); }
+.msg.file { background:rgba(0,184,148,.08); padding:8px 12px; border-radius:8px; border-left:3px solid var(--green); cursor:pointer; }
+.msg.file:hover { background:rgba(0,184,148,.15); }
+.msg.file .file-icon { font-size:20px; margin-right:8px; }
+.msg.file .file-name { font-size:14px; }
+.msg.file .file-size { font-size:11px; color:var(--text2); }
+
+/* 输入区 */
+.input-area { background:var(--surface); border-top:1px solid var(--border); padding:12px 16px; display:flex; gap:8px; align-items:center; flex-shrink:0; }
+.input-area select { padding:8px 10px; background:var(--bg); border:1px solid var(--border); border-radius:6px; color:var(--text); font-size:13px; outline:none; cursor:pointer; }
+.input-area input[type="text"] { flex:1; padding:10px 14px; background:var(--bg); border:1px solid var(--border); border-radius:8px; color:var(--text); font-size:14px; outline:none; }
+.input-area input:focus { border-color:var(--accent); }
+.input-area button { padding:10px 18px; background:var(--accent); border:none; border-radius:8px; color:#fff; cursor:pointer; font-size:14px; font-weight:600; transition:.2s; }
+.input-area button:hover { background:var(--accent2); }
+.input-area .emoji-btn { background:none; border:none; font-size:22px; cursor:pointer; padding:4px; line-height:1; }
+.input-area .file-btn { background:none; border:none; font-size:20px; cursor:pointer; padding:4px; line-height:1; }
+
+/* 表情面板 */
+.emoji-panel { display:none; position:absolute; bottom:60px; left:16px; background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:10px; width:340px; max-height:220px; overflow-y:auto; z-index:100; box-shadow:0 10px 40px rgba(0,0,0,.5); }
+.emoji-panel.show { display:block; }
+.emoji-panel .emoji-grid { display:flex; flex-wrap:wrap; gap:3px; }
+.emoji-panel .emoji-item { font-size:26px; cursor:pointer; padding:4px; border-radius:4px; transition:.1s; width:36px; text-align:center; }
+.emoji-panel .emoji-item:hover { background:var(--surface2); transform:scale(1.2); }
+
+/* 文件预览 */
+.file-preview { display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,.8); z-index:200; align-items:center; justify-content:center; }
+.file-preview.show { display:flex; }
+.file-preview .preview-box { background:var(--surface); border-radius:12px; padding:20px; max-width:90%; max-height:90%; overflow:auto; }
+.file-preview img { max-width:100%; max-height:70vh; border-radius:8px; }
+.file-preview .preview-info { margin-top:12px; text-align:center; }
+.file-preview .close-btn { position:absolute; top:20px; right:30px; font-size:30px; color:#fff; cursor:pointer; background:none; border:none; }
+
+/* 游戏列表 */
+.game-grid { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
+.game-item { padding:8px; border-radius:6px; cursor:pointer; text-align:center; font-size:12px; transition:.15s; background:var(--surface2); }
+.game-item:hover { background:var(--accent); transform:translateY(-1px); }
+.game-item .game-icon { font-size:24px; display:block; margin-bottom:4px; }
+.game-item .game-tag { font-size:10px; background:rgba(255,255,255,.1); padding:1px 4px; border-radius:3px; }
+
+/* 游戏弹窗 */
+.game-modal { display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,.7); z-index:150; align-items:center; justify-content:center; }
+.game-modal.show { display:flex; }
+.game-modal .game-box { background:var(--surface); border-radius:12px; padding:20px; min-width:400px; max-width:95%; max-height:90vh; overflow:auto; }
+.game-modal .game-title { font-size:18px; margin-bottom:16px; display:flex; justify-content:space-between; align-items:center; }
+.game-modal .game-title .close-gm { background:none; border:none; color:var(--text2); font-size:22px; cursor:pointer; padding:4px; }
+.game-modal .game-title .close-gm:hover { color:var(--red); }
+.game-modal canvas { display:block; margin:0 auto; background:var(--bg); border-radius:8px; }
+.game-modal .game-info { text-align:center; margin:12px 0; font-size:14px; color:var(--text2); }
+.game-modal .game-btns { display:flex; justify-content:center; gap:8px; margin-top:12px; flex-wrap:wrap; }
+.game-modal .game-btns button { padding:8px 16px; border:none; border-radius:6px; cursor:pointer; font-size:13px; color:#fff; transition:.2s; }
+.game-modal .game-btns .btn-primary { background:var(--accent); }
+.game-modal .game-btns .btn-secondary { background:var(--surface2); color:var(--text); }
+.game-modal .game-btns .btn-danger { background:var(--red); }
+.game-modal .game-btns button:hover { transform:translateY(-1px); }
+.game-modal .join-btns { display:flex; flex-wrap:wrap; gap:6px; justify-content:center; margin:8px 0; }
+
+/* 滚动条 */
+::-webkit-scrollbar { width:6px; }
+::-webkit-scrollbar-track { background:transparent; }
+::-webkit-scrollbar-thumb { background:var(--border); border-radius:3px; }
+::-webkit-scrollbar-thumb:hover { background:#555; }
+
+/* 邀请弹窗 */
+.invite-modal { display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,.7); z-index:160; align-items:center; justify-content:center; }
+.invite-modal.show { display:flex; }
+.invite-modal .invite-box { background:var(--surface); border-radius:12px; padding:28px 32px; min-width:340px; max-width:90%; text-align:center; box-shadow:0 20px 60px rgba(0,0,0,.5); animation:fadeIn .2s; }
+.invite-modal .invite-title { font-size:20px; margin-bottom:16px; font-weight:600; }
+.invite-modal .invite-info { font-size:15px; color:var(--text2); margin-bottom:24px; line-height:1.6; }
+.invite-modal .invite-btns { display:flex; justify-content:center; gap:12px; }
+.invite-modal .invite-btns button { padding:10px 24px; border:none; border-radius:8px; cursor:pointer; font-size:15px; font-weight:600; transition:.2s; min-width:100px; }
+.invite-modal .invite-accept { background:var(--green); color:#fff; }
+.invite-modal .invite-accept:hover { transform:translateY(-1px); box-shadow:0 4px 15px rgba(0,184,148,.4); }
+.invite-modal .invite-decline { background:var(--red); color:#fff; }
+.invite-modal .invite-decline:hover { transform:translateY(-1px); box-shadow:0 4px 15px rgba(225,112,85,.4); }
+
+/* 封禁/禁言 弹窗遮罩 */
+.modal-overlay { display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,.7); z-index:200; align-items:center; justify-content:center; }
+.modal-overlay.show { display:flex; }
+.modal-overlay .alert-box { background:var(--surface); border-radius:12px; padding:28px 32px; min-width:340px; max-width:90%; text-align:center; box-shadow:0 20px 60px rgba(0,0,0,.5); animation:fadeIn .2s; }
+.modal-overlay .alert-title { font-size:20px; margin-bottom:16px; font-weight:600; }
+.modal-overlay .alert-info { font-size:15px; color:var(--text2); margin-bottom:24px; line-height:1.6; }
+.modal-overlay .alert-btns { display:flex; justify-content:center; gap:12px; }
+.modal-overlay .alert-close-btn { padding:10px 24px; border:none; border-radius:8px; cursor:pointer; font-size:15px; font-weight:600; transition:.2s; min-width:100px; background:var(--accent); color:#fff; }
+.modal-overlay .alert-close-btn:hover { transform:translateY(-1px); box-shadow:0 4px 15px rgba(108,92,231,.4); }
+
+@media(max-width:768px) {
+    .sidebar { width:180px; }
+    .game-grid { grid-template-columns:1fr; }
+    .game-modal .game-box { min-width:auto; width:98%; }
+    .connect-box { width:92%; }
+}
+</style>
+</head>
+<body>
+
+<!-- ======== 主界面（自动连接，无需登录页） ======== -->
+<div class="container" id="chatContainer" style="display:flex;flex-direction:column;position:relative">
+<!-- 公告横幅 -->
+<div class="announcement-banner" id="announcementBanner" style="display:none">
+  <span id="announcementText"></span>
+  <button class="ann-close" onclick="closeAnnouncement()">✕</button>
+</div>
+<div class="header">
+<h1>☁️ <span id="headerTitle">云端聊天室</span></h1>
+<div class="status">
+<button class="lang-btn" id="langToggle" onclick="toggleLang()">EN</button>
+<span id="bifeBadge" style="display:inline-flex;align-items:center;gap:4px;background:linear-gradient(135deg,#6c5ce7,#a29bfe);color:#fff;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700;margin-right:8px">🛡️ BIFE</span>
+<span class="dot" id="statusDot"></span>
+<span id="statusText">已连接</span>
+<span style="color:var(--text2);margin-left:8px">在线: <b id="onlineCount">0</b></span>
+<span id="myIdLabel" style="color:var(--text2);margin-left:8px;font-size:12px"></span>
+</div>
+</div>
+<div class="main">
+<!-- 侧栏 -->
+<div class="sidebar">
+<div class="sidebar-tabs">
+<div class="sidebar-tab active" id="tabUsers" onclick="switchSidebar('users',this)">👥 用户</div>
+<div class="sidebar-tab" id="tabRooms" onclick="switchSidebar('rooms',this)">🏠 房间</div>
+<div class="sidebar-tab" id="tabGames" onclick="switchSidebar('games',this)">🎮 游戏</div>
+</div>
+<!-- 用户面板 -->
+<div class="sidebar-panel active" id="panel-users">
+<div class="title">在线用户 <span id="userCount">0</span></div>
+<div id="userList"></div>
+</div>
+<!-- 房间面板 -->
+<div class="sidebar-panel" id="panel-rooms">
+<div class="title">房间列表</div>
+<div id="roomList"></div>
+<div class="create-room">
+  <input type="text" id="roomNameInput" placeholder="输入房间名" onkeydown="if(event.key==='Enter')document.getElementById('roomPwdInput').focus()">
+  <input type="password" id="roomPwdInput" placeholder="设置密码（可选，留空公开）" onkeydown="if(event.key==='Enter')createRoom()">
+  <button onclick="createRoom()">🔒 创建房间</button>
+</div>
+<div style="margin-top:8px;font-size:12px;color:var(--text2)" id="currentRoomLabel">当前房间: <span id="currentRoom">大厅</span></div>
+</div>
+<!-- 游戏面板 -->
+<div class="sidebar-panel" id="panel-games">
+<div class="title" id="gameOnlineTitle">在线游戏</div>
+<div class="game-grid" id="onlineGameList"></div>
+<div class="title" id="gameOfflineTitle" style="margin-top:10px">单人游戏</div>
+<div class="game-grid" id="offlineGameList"></div>
+</div>
+</div>
+<!-- 聊天区域 -->
+<div class="chat-area">
+<div class="messages" id="messages"></div>
+<div style="padding:4px 16px;background:rgba(108,92,231,.1);border-top:1px solid var(--border);font-size:12px;color:var(--text2);text-align:center;flex-shrink:0" id="civilityNotice">💬 请文明用语，尊重他人，违规将被禁言或封禁</div>
+<div class="input-area">
+<select id="targetUser"><option value="0">所有人</option></select>
+<button class="file-btn" onclick="document.getElementById('fileInput').click()">📎</button>
+<input type="file" id="fileInput" style="display:none" onchange="sendFile(this)">
+<button class="emoji-btn" onclick="toggleEmoji()">😊</button>
+<div class="emoji-panel" id="emojiPanel"><div class="emoji-grid" id="emojiGrid"></div></div>
+<input type="text" id="msgInput" placeholder="输入消息，Enter 发送" autocomplete="off" onkeydown="if(event.key==='Enter')sendMsg()">
+<button class="btn" onclick="sendMsg()">发送</button>
+</div>
+</div>
+</div>
+</div>
+
+<!-- 文件预览 -->
+<div class="file-preview" id="filePreview" onclick="this.classList.remove('show')">
+<button class="close-btn">&times;</button>
+<div class="preview-box" id="previewContent" onclick="event.stopPropagation()"></div>
+</div>
+
+<!-- ======== 游戏弹窗 ======== -->
+<div class="game-modal" id="gameModal">
+<div class="game-box">
+<div class="game-title"><span id="gameTitle">游戏</span><button class="close-gm" onclick="closeGame()">✕</button></div>
+<div id="gameContent"></div>
+</div>
+</div>
+
+<!-- ======== 邀请弹窗 ======== -->
+<div class="invite-modal" id="inviteModal">
+<div class="invite-box">
+<div class="invite-title">🎮 游戏邀请</div>
+<div class="invite-info" id="inviteInfo">邀请信息</div>
+<div class="invite-btns">
+<button class="invite-accept" id="inviteAccept">✅ 接受</button>
+<button class="invite-decline" id="inviteDecline">❌ 拒绝</button>
+</div>
+</div>
+</div>
+
+<!-- ======== 封禁/禁言 通知弹窗 ======== -->
+<div class="modal-overlay" id="alertModal">
+<div class="alert-box">
+<div class="alert-title" id="alertTitle">通知</div>
+<div class="alert-info" id="alertInfo">信息内容</div>
+<div class="alert-btns">
+<button class="alert-close-btn" id="alertCloseBtn">✅ 确定</button>
+</div>
+</div>
+</div>
+
+<script>
+// ============================================================
+//  多语言支持 (CN/EN)
+// ============================================================
+let currentLang = localStorage.getItem('_lang') || 'zh';
+const LANG = {
+    zh: {
+        headerTitle: '云端聊天室',
+        online: '在线',
+        statusConnecting: '连接中...',
+        statusConnected: '已连接',
+        statusDisconnected: '已断开',
+        statusReconnecting: '已断开，3秒后重连...',
+        statusBanned: '账号已被封禁',
+        statusError: '连接错误',
+        tabUsers: '👥 用户',
+        tabRooms: '🏠 房间',
+        tabGames: '🎮 游戏',
+        onlineUsers: '在线用户',
+        emptyUsers: '暂无用户在线',
+        gameOnline: '在线游戏',
+        gameOffline: '单人游戏',
+        sendBtn: '发送',
+        inputPlaceholder: '输入消息...',
+        systemMsg: '系统消息',
+        alertOk: '✅ 确定',
+        btnMute: '🔇 禁言',
+        btnUnmute: '🔊 解除',
+        btnBan: '🚫封号',
+        btnUnban: '🔓 解封',
+        mutedTitle: '🔇 你已被禁言',
+        bannedTitle: '🚫 账号已被封禁',
+        reason: '原因',
+        duration: '持续时间',
+        permanent: '永久',
+        minutes: '分钟',
+        hours: '小时',
+        days: '天',
+        civilityNotice: '💬 请文明用语，尊重他人，违规将被禁言或封禁',
+        bannedInfo: '您因违规操作被限制访问所有服务',
+        mutedInfo: '您已被禁言，暂时无法发言',
+        operateBy: '操作人',
+        banTime: '封禁时间',
+        unbanTime: '解封时间',
+        announcementTitle: '📢 公告',
+    },
+    en: {
+        headerTitle: 'Cloud Chat',
+        online: 'Online',
+        statusConnecting: 'Connecting...',
+        statusConnected: 'Connected',
+        statusDisconnected: 'Disconnected',
+        statusReconnecting: 'Disconnected, reconnecting in 3s...',
+        statusBanned: 'Account Banned',
+        statusError: 'Connection Error',
+        tabUsers: '👥 Users',
+        tabRooms: '🏠 Rooms',
+        tabGames: '🎮 Games',
+        onlineUsers: 'Online Users',
+        emptyUsers: 'No users online',
+        gameOnline: 'Online Games',
+        gameOffline: 'Single Player',
+        sendBtn: 'Send',
+        inputPlaceholder: 'Type a message...',
+        systemMsg: 'System',
+        alertOk: '✅ OK',
+        btnMute: '🔇 Mute',
+        btnUnmute: '🔊 Unmute',
+        btnBan: '🚫 Ban',
+        btnUnban: '🔓 Unban',
+        mutedTitle: '🔇 You have been muted',
+        bannedTitle: '🚫 Account Banned',
+        reason: 'Reason',
+        duration: 'Duration',
+        permanent: 'Permanent',
+        minutes: 'min',
+        hours: 'hr',
+        days: 'day',
+        civilityNotice: '💬 Please be respectful. Violations may result in mute or ban.',
+        bannedInfo: 'You have been banned from all server services due to rule violation.',
+        mutedInfo: 'You have been muted. You cannot send messages.',
+        operateBy: 'By',
+        banTime: 'Banned at',
+        unbanTime: 'Unban at',
+        announcementTitle: '📢 Announcement',
+    }
+};
+
+function t(key) { return (LANG[currentLang] && LANG[currentLang][key]) || LANG.zh[key] || key; }
+
+function toggleLang() {
+    currentLang = currentLang === 'zh' ? 'en' : 'zh';
+    localStorage.setItem('_lang', currentLang);
+    document.getElementById('langToggle').textContent = currentLang === 'zh' ? 'EN' : '中';
+    applyLang();
+}
+
+function applyLang() {
+    document.getElementById('headerTitle').textContent = t('headerTitle');
+    document.getElementById('langToggle').textContent = currentLang === 'zh' ? 'EN' : '中';
+    // 侧栏标签
+    document.getElementById('tabUsers').textContent = t('tabUsers');
+    document.getElementById('tabRooms').textContent = t('tabRooms');
+    document.getElementById('tabGames').textContent = t('tabGames');
+    // 面板标题
+    document.getElementById('gameOnlineTitle').textContent = t('gameOnline');
+    document.getElementById('gameOfflineTitle').textContent = t('gameOffline');
+    // 发送按钮
+    const sendBtn = document.getElementById('sendBtn');
+    if (sendBtn) sendBtn.textContent = t('sendBtn');
+    // 输入框placeholder
+    const input = document.getElementById('msgInput');
+    if (input) input.placeholder = t('inputPlaceholder');
+    // alert确认按钮
+    const alertBtn = document.getElementById('alertCloseBtn');
+    if (alertBtn) alertBtn.textContent = t('alertOk');
+    // 文明用语提示
+    const civ = document.getElementById('civilityNotice');
+    if (civ) civ.textContent = t('civilityNotice');
+}
+
+// ============================================================
+//  核心连接
+// ============================================================
+let ws = null, myId = null, myName = '', reconnectTimer = null;
+const gameInstances = {};
+
+// 设备指纹 - 使用 Canvas fingerprint + 浏览器信号
+function getDeviceId() {
+    let deviceId = localStorage.getItem('_deviceId');
+    if (deviceId) return deviceId;
+    // 生成 canvas fingerprint
+    const canvas = document.createElement('canvas');
+    canvas.width = 200; canvas.height = 50;
+    const ctx = canvas.getContext('2d');
+    ctx.textBaseline = 'top';
+    ctx.font = '14px Arial';
+    ctx.fillStyle = '#f60';
+    ctx.fillRect(125, 1, 62, 20);
+    ctx.fillStyle = '#069';
+    ctx.fillText('DeviceFingerprint', 2, 15);
+    ctx.fillStyle = 'rgba(102, 204, 0, 0.7)';
+    ctx.fillText('BrowserID', 4, 45);
+    const canvasHash = canvas.toDataURL();
+    // 收集浏览器信号
+    const signals = [
+        navigator.userAgent,
+        navigator.language,
+        navigator.platform,
+        screen.colorDepth,
+        screen.width + 'x' + screen.height,
+        new Date().getTimezoneOffset(),
+        !!navigator.hardwareConcurrency,
+        navigator.deviceMemory || '',
+        canvasHash
+    ];
+    // 计算简单 hash
+    const raw = signals.join('|||');
+    let hash = 0;
+    for (let i = 0; i < raw.length; i++) {
+        const ch = raw.charCodeAt(i);
+        hash = ((hash << 5) - hash) + ch;
+        hash |= 0;
+    }
+    deviceId = Math.abs(hash).toString(16).padStart(8, '0') + '-' + Date.now().toString(36);
+    localStorage.setItem('_deviceId', deviceId);
+    return deviceId;
+}
+
+// 自动确定服务器地址
+function getServerUrl() {
+    const loc = window.location;
+    const proto = loc.protocol === 'https:' ? 'wss:' : 'ws:';
+    return proto + '//' + loc.host + '/?deviceId=' + encodeURIComponent(getDeviceId());
+}
+
+// ============ 自动连接 ============
+let isConnecting = false; // 防止重复连接
+function doConnect() {
+    // 防止重复连接
+    if (isConnecting) return;
+    isConnecting = true;
+    
+    const url = getServerUrl();
+
+    try { ws = new WebSocket(url); } catch(e) {
+        document.getElementById('statusText').textContent = '连接失败: ' + e.message;
+        setTimeout(doConnect, 3000);
+        return;
+    }
+
+    ws.onopen = () => {
+        // 清除重连定时器
+        if (reconnectTimer) {
+            clearTimeout(reconnectTimer);
+            reconnectTimer = null;
+        }
+        // 不需要发送 set_name，服务器会自动分配名字
+        document.getElementById('statusDot').className = 'dot';
+        document.getElementById('statusText').textContent = t('statusConnecting');
+    };
+
+    ws.onmessage = (ev) => {
+        try { handleMessage(JSON.parse(ev.data)); } catch(e) {}
+    };
+
+    ws.onclose = (event) => {
+        document.getElementById('statusDot').className = 'dot off';
+        // 检查封禁断开 (code 4002)
+        if (event && event.code === 4002) {
+            document.getElementById('statusText').textContent = t('statusBanned');
+            showAlertModal('🚫 连接被拒绝',
+                '服务器拒绝了你的连接 (代码: 4002)<br>你的设备已被封禁。',
+                false);
+            return; // 不自动重连
+        }
+        document.getElementById('statusText').textContent = t('statusReconnecting');
+        reconnectTimer = setTimeout(doConnect, 3000);
+    };
+    ws.onerror = () => {
+        document.getElementById('statusDot').className = 'dot off';
+        document.getElementById('statusText').textContent = t('statusError') + '，3秒后重试...';
+        reconnectTimer = setTimeout(doConnect, 3000);
+    };
+}
+
+document.addEventListener('DOMContentLoaded', doConnect);
+
+// ============================================================
+//  消息处理
+// ============================================================
+function handleMessage(msg) {
+    switch (msg.type) {
+        case 'welcome':
+            myId = msg.id;
+            document.getElementById('myIdLabel').textContent = '#ID:' + myId;
+            addMessage('system', '', msg.message);
+            updateOnline(msg.onlineCount);
+            // 管理员功能在后台
+            break;
+        case 'join': addMessage('system', '', msg.message); updateOnline(msg.onlineCount); break;
+        case 'leave': addMessage('system', '', msg.message); updateOnline(msg.onlineCount); break;
+        case 'chat':
+            addMessage('chat', msg.name || getUserName(msg.id), msg.content, msg.time, msg.color, msg.id);
+            break;
+        case 'private':
+            const from = msg.fromName || getUserName(msg.from);
+            addMessage('private', from + ' (私聊)', msg.content, msg.time);
+            break;
+        case 'private_sent':
+            const to = msg.toName || getUserName(msg.to);
+            addMessage('private', '→ ' + to + ' (私聊)', msg.content, msg.time);
+            break;
+        case 'name_accepted':
+            myName = msg.name;
+            document.getElementById('statusDot').className = 'dot';
+            document.getElementById('statusText').textContent = t('statusConnected') + ' (' + msg.name + ')';
+            document.getElementById('msgInput').focus();
+            break;
+        case 'system':
+            addMessage('system', '', msg.message);
+            break;
+        case 'error':
+            // 翻译服务器中文错误提示
+            let errMsg = msg.message;
+            if (currentLang === 'en' && errMsg) {
+                const errMap = {
+                    '你已被禁言，暂时无法发言': t('mutedInfo'),
+                    '无权限': 'Permission denied',
+                    '缺少机器码': 'Missing machine code',
+                    '设备 .* 未被封禁': 'Device not banned',
+                    '用户名已存在': 'Username already taken',
+                    '用户名不能为空': 'Username cannot be empty',
+                    '消息不能为空': 'Message cannot be empty',
+                    '房间已满': 'Room is full',
+                    '房间不存在': 'Room does not exist',
+                    '密码错误': 'Incorrect password',
+                };
+                for (const [cn, en] of Object.entries(errMap)) {
+                    if (errMsg.includes(cn) || new RegExp(cn).test(errMsg)) {
+                        errMsg = en;
+                        break;
+                    }
+                }
+            }
+            addMessage('system', '', '⚠ ' + errMsg);
+            break;
+        case 'user_list':
+            updateUserList(msg.users, msg.onlineCount);
+            break;
+        case 'room_list':
+            updateRoomList(msg.rooms || []);
+            break;
+        case 'room_joined':
+            document.getElementById('currentRoom').textContent = '当前房间: ' + msg.room;
+            addMessage('system', '', '已切换到房间「' + msg.room + '」');
+            break;
+        case 'history':
+            (msg.messages || []).forEach(m => {
+                if (m.type === 'chat') addMessage('chat', m.name || getUserName(m.id), m.content, m.time, m.color, m.id);
+                else if (m.type === 'file_share') addFileMessage(m);
+                else if (m.type === 'system') addMessage('system', '', m.content || m.message);
+            });
+            break;
+        case 'file_share':
+            addFileMessage(msg);
+            break;
+        case 'gallery':
+            renderEmojiGrid(msg.emojis || []);
+            break;
+        case 'announcement':
+            showAnnouncement(msg.message, msg.messageEn);
+            break;
+        case 'kicked':
+            alert(msg.message);
+            ws.close();
+            break;
+        case 'banned':
+            showAlertModal(t('bannedTitle'),
+                '<b>' + t('reason') + ':</b> ' + (msg.reason || t('permanent')) + '<br>' +
+                '<b>' + t('duration') + ':</b> ' + (msg.duration ? msg.duration + ' ' + t('minutes') : t('permanent')) + '<br>' +
+                (msg.bannedAt ? '<b>' + t('banTime') + ':</b> ' + new Date(msg.bannedAt).toLocaleString() + '<br>' : '') +
+                (msg.bannedUntil ? '<b>' + t('unbanTime') + ':</b> ' + new Date(msg.bannedUntil).toLocaleString() : ''),
+                false);
+            // 阻止自动重连
+            if (reconnectTimer) {
+                clearTimeout(reconnectTimer);
+                reconnectTimer = null;
+            }
+            break;
+        case 'muted':
+            showAlertModal(t('mutedTitle'),
+                '<b>' + t('duration') + ':</b> ' + (msg.duration ? msg.duration + ' ' + t('minutes') : t('permanent')) + '<br>' +
+                (msg.mutedUntil ? '<b>' + t('unbanTime') + ':</b> ' + new Date(msg.mutedUntil).toLocaleString() : ''),
+                true);
+            break;
+
+        // 游戏消息
+        case 'game_invite':
+            showInviteModal(msg);
+            break;
+        case 'game_invite_sent':
+            addMessage('system', '', '已发送游戏邀请');
+            break;
+        case 'game_declined':
+            addMessage('system', '', msg.name + ' 拒绝了游戏邀请');
+            break;
+        case 'game_start':
+            openOnlineGame(msg);
+            break;
+        case 'game_state':
+            updateGameState(msg);
+            break;
+        case 'game_ended':
+            closeGame();
+            addMessage('system', '', '游戏结束: ' + (msg.reason || ''));
+            break;
+        case 'game_rematch_req':
+            if (confirm(msg.fromName + ' 请求再来一局，是否接受？')) {
+                ws.send(JSON.stringify({ type: 'game_rematch', gameId: msg.gameId }));
+            }
+            break;
+
+        case 'ping':
+            ws.send(JSON.stringify({ type: 'pong' }));
+            break;
+        case 'pong': break;
+    }
+}
+
+// ============================================================
+//  邀请弹窗
+// ============================================================
+let pendingInvite = null;
+
+function showInviteModal(msg) {
+    pendingInvite = msg;
+    document.getElementById('inviteInfo').textContent = msg.fromName + ' 邀请你玩「' + msg.gameName + '」';
+    document.getElementById('inviteModal').classList.add('show');
+}
+
+function closeInviteModal() {
+    document.getElementById('inviteModal').classList.remove('show');
+    pendingInvite = null;
+}
+
+document.getElementById('inviteAccept').addEventListener('click', () => {
+    if (pendingInvite) {
+        ws.send(JSON.stringify({ type: 'game_accept', from: pendingInvite.from, game: pendingInvite.game }));
+    }
+    closeInviteModal();
+});
+
+document.getElementById('inviteDecline').addEventListener('click', () => {
+    if (pendingInvite) {
+        ws.send(JSON.stringify({ type: 'game_decline', from: pendingInvite.from }));
+    }
+    closeInviteModal();
+});
+
+// ============================================================
+//  用户列表
+// ============================================================
+function getUserName(id) {
+    const el = document.querySelector('.user-item[data-id="'+id+'"]');
+    if (el) return el.dataset.name || '#'+id;
+    return '#'+id;
+}
+
+function updateOnline(count) { document.getElementById('onlineCount').textContent = count; }
+
+function updateUserList(users, count) {
+    const list = document.getElementById('userList');
+    const sel = document.getElementById('targetUser');
+    list.innerHTML = '';
+    sel.innerHTML = '<option value="0">所有人</option>';
+    document.getElementById('userCount').textContent = count || users.length;
+
+    const sorted = [...users].sort((a,b) => { if (a.id===myId) return -1; if (b.id===myId) return 1; return 0; });
+    sorted.forEach(u => {
+        const div = document.createElement('div');
+        div.className = 'user-item' + (u.id===myId ? ' me' : '');
+        div.dataset.id = u.id;
+        div.dataset.name = u.name;
+        div.innerHTML = `<span class="status-dot ${u.status||'online'}"></span><span style="color:${u.color||'#fff'}">${u.name}</span>`;
+
+        // 右键菜单
+        if (u.id !== myId) {
+            div.oncontextmenu = (e) => {
+                e.preventDefault();
+                const action = prompt('操作选项:\
+1. 私聊\
+2. 邀请游戏\
+输入数字:');
+                if (action === '1') {
+                    document.getElementById('targetUser').value = u.id;
+                    document.getElementById('msgInput').focus();
+                } else if (action === '2') {
+                    const games = ['tictactoe','gomoku','rps','guessnumber','connect4','hangman'];
+                    const names = ['井字棋','五子棋','石头剪刀布','猜数字','四子棋','猜单词'];
+                    const choice = prompt('选择游戏:\
+' + games.map((g,i) => (i+1)+'. '+names[i]).join('\
+') + '\
+输入数字:');
+                    const idx = parseInt(choice) - 1;
+                    if (idx >= 0 && idx < games.length) {
+                        ws.send(JSON.stringify({ type: 'game_invite', targetId: u.id, game: games[idx] }));
+                    }
+                }
+            };
+        }
+        list.appendChild(div);
+
+        if (u.id !== myId) {
+            const opt = document.createElement('option');
+            opt.value = u.id;
+            opt.textContent = u.name;
+            sel.appendChild(opt);
+        }
+    });
+    updateOnline(count || users.length);
+}
+
+// ============================================================
+//  房间
+// ============================================================
+function switchSidebar(name, el) {
+    document.querySelectorAll('.sidebar-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.sidebar-panel').forEach(p => p.classList.remove('active'));
+    el.classList.add('active');
+    document.getElementById('panel-'+name).classList.add('active');
+}
+
+function createRoom() {
+    const name = document.getElementById('roomNameInput').value.trim();
+    const pwd = document.getElementById('roomPwdInput').value;
+    if (!name) return;
+    ws.send(JSON.stringify({ type: 'create_room', name, password: pwd }));
+    document.getElementById('roomNameInput').value = '';
+    document.getElementById('roomPwdInput').value = '';
+}
+
+function joinRoom(name, locked) {
+    if (locked) {
+        const pwd = prompt('🔒 房间「' + name + '」需要密码：');
+        if (pwd === null) return;
+        ws.send(JSON.stringify({ type: 'join_room', name, password: pwd }));
+    } else {
+        ws.send(JSON.stringify({ type: 'join_room', name }));
+    }
+}
+
+function leaveRoom() {
+    ws.send(JSON.stringify({ type: 'leave_room' }));
+}
+
+function updateRoomList(rooms) {
+    const el = document.getElementById('roomList');
+    el.innerHTML = rooms.length ? '' : '<div style="color:var(--text2);font-size:13px;padding:8px;text-align:center">暂无房间</div>';
+    rooms.forEach(r => {
+        const name = typeof r === 'string' ? r : r.name;
+        const locked = typeof r === 'string' ? false : r.locked;
+        const div = document.createElement('div');
+        div.className = 'room-item';
+        div.innerHTML = `<span class="icon">🏠</span>${name}${locked ? ' <span style="font-size:11px">🔒</span>' : ''}`;
+        div.onclick = () => joinRoom(name, locked);
+        el.appendChild(div);
+    });
+    if (rooms.length) {
+        const btn = document.createElement('button');
+        btn.textContent = '回大厅';
+        btn.style.cssText = 'width:100%;padding:8px;margin-top:8px;background:var(--surface2);border:none;border-radius:6px;color:var(--text);cursor:pointer;font-size:13px';
+        btn.onclick = leaveRoom;
+        el.appendChild(btn);
+    }
+}
+
+// ============================================================
+//  消息显示
+// ============================================================
+function addMessage(type, name, text, time, color, id) {
+    const el = document.getElementById('messages');
+    const div = document.createElement('div');
+    if (type === 'system') {
+        div.className = 'msg system';
+        div.innerHTML = `<span class="text">${text}</span>`;
+    } else if (type === 'private') {
+        div.className = 'msg private';
+        div.innerHTML = `<span class="time">${time||''}</span><span class="name">${name}</span><span class="text">${escapeHtml(text)}</span>`;
+    } else {
+        const isSelf = id && id === myId;
+        div.className = 'msg ' + (isSelf ? 'self' : 'other');
+        const nameStyle = color ? `style="color:${color}"` : '';
+        div.innerHTML = isSelf
+            ? `<span class="text">${escapeHtml(text)}</span><span class="time">${time||''}</span>`
+            : `<span class="time">${time||''}</span><span class="name" ${nameStyle}>${name}</span><span class="text">${escapeHtml(text)}</span>`;
+    }
+    el.appendChild(div);
+    el.scrollTop = el.scrollHeight;
+}
+
+function addFileMessage(msg) {
+    const el = document.getElementById('messages');
+    const div = document.createElement('div');
+    div.className = 'msg file';
+    const size = msg.fileSize > 1024 ? (msg.fileSize/1024).toFixed(1) + 'KB' : msg.fileSize + 'B';
+    const isImage = (msg.mime||'').startsWith('image/');
+    div.innerHTML = `<span class="time">${msg.time||''}</span>
+        <span class="name" style="color:${msg.color}">${msg.name}</span>
+        <span class="file-icon">${isImage ? '🖼️' : '📎'}</span>
+        <span class="file-name">${escapeHtml(msg.fileName)}</span>
+        <span class="file-size">(${size})</span>`;
+    if (isImage) {
+        div.style.cursor = 'pointer';
+        div.onclick = () => previewImage(msg.data, msg.fileName);
+    } else {
+        div.style.cursor = 'pointer';
+        div.onclick = () => {
+            const a = document.createElement('a');
+            a.href = msg.data;
+            a.download = msg.fileName;
+            a.click();
+        };
+    }
+    el.appendChild(div);
+    el.scrollTop = el.scrollHeight;
+}
+
+function previewImage(data, name) {
+    const fp = document.getElementById('filePreview');
+    const pc = document.getElementById('previewContent');
+    pc.innerHTML = `<img src="${data}"><div class="preview-info">${escapeHtml(name)}</div>`;
+    fp.classList.add('show');
+}
+
+// ============================================================
+//  公告横幅
+// ============================================================
+function showAnnouncement(text, textEn) {
+    const banner = document.getElementById('announcementBanner');
+    const textEl = document.getElementById('announcementText');
+    if (textEn && currentLang === 'en') {
+        textEl.innerHTML = '📢 ' + escapeHtml(textEn) + '<br><span style="font-size:11px;opacity:0.8">' + escapeHtml(text) + '</span>';
+    } else if (textEn) {
+        textEl.innerHTML = '📢 ' + escapeHtml(text) + '<br><span style="font-size:11px;opacity:0.8">' + escapeHtml(textEn) + '</span>';
+    } else {
+        textEl.textContent = '📢 ' + text;
+    }
+    banner.style.display = 'block';
+    // 15秒后自动关闭
+    if (window.annTimer) clearTimeout(window.annTimer);
+    window.annTimer = setTimeout(closeAnnouncement, 15000);
+}
+
+function closeAnnouncement() {
+    document.getElementById('announcementBanner').style.display = 'none';
+    if (window.annTimer) clearTimeout(window.annTimer);
+}
+
+function escapeHtml(t) {
+    const d = document.createElement('div');
+    d.textContent = t;
+    return d.innerHTML;
+}
+
+// ============================================================
+//  发送
+// ============================================================
+function sendMsg() {
+    const input = document.getElementById('msgInput');
+    const text = input.value.trim();
+    const target = parseInt(document.getElementById('targetUser').value);
+    if (!text) return;
+    input.value = '';
+    if (!ws || ws.readyState !== 1) return;
+    if (target > 0) {
+        ws.send(JSON.stringify({ type: 'private', targetId: target, content: text }));
+    } else {
+        ws.send(JSON.stringify({ type: 'chat', content: text }));
+    }
+}
+
+function sendFile(input) {
+    const file = input.files[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) { alert('文件最大5MB'); input.value = ''; return; }
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        ws.send(JSON.stringify({
+            type: 'file_share',
+            fileName: file.name,
+            fileSize: file.size,
+            mime: file.type,
+            data: e.target.result
+        }));
+        input.value = '';
+    };
+    reader.readAsDataURL(file);
+}
+
+// ============================================================
+//  表情
+// ============================================================
+function toggleEmoji() {
+    const p = document.getElementById('emojiPanel');
+    p.classList.toggle('show');
+    if (p.classList.contains('show') && !p.dataset.loaded) {
+        ws.send(JSON.stringify({ type: 'get_gallery' }));
+        p.dataset.loaded = '1';
+    }
+}
+
+function renderEmojiGrid(emojis) {
+    const g = document.getElementById('emojiGrid');
+    g.innerHTML = '';
+    emojis.forEach(e => {
+        const span = document.createElement('span');
+        span.className = 'emoji-item';
+        span.textContent = e;
+        span.onclick = () => {
+            const input = document.getElementById('msgInput');
+            input.value += e;
+            input.focus();
+            document.getElementById('emojiPanel').classList.remove('show');
+        };
+        g.appendChild(span);
+    });
+}
+
+// 点击其他地方关闭表情
+document.addEventListener('click', (e) => {
+    if (!e.target.closest('.emoji-btn') && !e.target.closest('.emoji-panel')) {
+        document.getElementById('emojiPanel').classList.remove('show');
+    }
+});
+
+// ============================================================
+//  游戏列表
+// ============================================================
+const ONLINE_GAMES = [
+    { id:'tictactoe', icon:'❌', name:'井字棋', tag:'2人' },
+    { id:'gomoku', icon:'⚫', name:'五子棋', tag:'2人' },
+    { id:'rps', icon:'✊', name:'石头剪刀布', tag:'2人' },
+    { id:'guessnumber', icon:'🔢', name:'猜数字', tag:'2-10人' },
+    { id:'connect4', icon:'🟡', name:'四子棋', tag:'2人' },
+    { id:'hangman', icon:'💀', name:'猜单词', tag:'2-10人' }
+];
+
+const OFFLINE_GAMES = [
+    { id:'snake', icon:'🐍', name:'贪吃蛇' },
+    { id:'tetris', icon:'🧱', name:'俄罗斯方块' },
+    { id:'minesweeper', icon:'💣', name:'扫雷' },
+    { id:'breakout', icon:'🧱', name:'打砖块' },
+    { id:'sudoku', icon:'🔢', name:'数独' },
+    { id:'flappy', icon:'🐤', name:'Flappy Bird' },
+    { id:'memory', icon:'🃏', name:'记忆翻牌' },
+    { id:'sliding', icon:'🧩', name:'滑块拼图' },
+    { id:'breakout', icon:'🏓', name:'打砖块' },
+    { id:'dino', icon:'🦖', name:'恐龙跑酷' },
+    { id:'solitaire', icon:'🃏', name:'纸牌接龙' },
+    { id:'tictactoe_ai', icon:'🤖', name:'井字棋AI' },
+    { id:'simon', icon:'🔔', name:'西蒙记忆' },
+    { id:'whack', icon:'🔨', name:'打地鼠' }
+];
+
+// 渲染游戏列表
+function initGameList() {
+    const ogl = document.getElementById('onlineGameList');
+    ogl.innerHTML = '';
+    ONLINE_GAMES.forEach(g => {
+        const div = document.createElement('div');
+        div.className = 'game-item';
+        div.innerHTML = `<span class="game-icon">${g.icon}</span>${g.name}<span class="game-tag">${g.tag}</span>`;
+        div.onclick = () => launchOnlineGame(g.id);
+        ogl.appendChild(div);
+    });
+
+    const ofl = document.getElementById('offlineGameList');
+    ofl.innerHTML = '';
+    OFFLINE_GAMES.forEach(g => {
+        const div = document.createElement('div');
+        div.className = 'game-item';
+        div.innerHTML = `<span class="game-icon">${g.icon}</span>${g.name}`;
+        div.onclick = () => launchOfflineGame(g.id);
+        ofl.appendChild(div);
+    });
+}
+
+// ============================================================
+//  在线游戏
+// ============================================================
+let currentGameId = null;
+
+function launchOnlineGame(gameType) {
+    // 显示在线游戏选择界面 - 选择对手
+    const gc = document.getElementById('gameContent');
+    const gt = document.getElementById('gameTitle');
+    gt.textContent = '🎮 ' + ONLINE_GAMES.find(g=>g.id===gameType)?.name || gameType;
+
+    // 获取在线用户列表
+    const users = document.querySelectorAll('.user-item:not(.me)');
+    if (users.length === 0) {
+        gc.innerHTML = '<div class="game-info">没有其他在线用户可邀请</div>';
+    } else {
+        let html = '<div class="game-info">选择要邀请的玩家：</div><div class="join-btns">';
+        users.forEach(u => {
+            const id = u.dataset.id;
+            const name = u.dataset.name;
+            html += `<button class="btn-primary" onclick="inviteGame(${id},'${gameType}')">🎮 ${name}</button>`;
+        });
+        html += '</div><div class="game-info" style="margin-top:12px;font-size:12px;color:var(--text2)">等待对方接受邀请...</div>';
+        gc.innerHTML = html;
+    }
+
+    // 还显示一个等待区
+    gc.innerHTML += '<div id="gameInviteStatus"></div>';
+
+    document.getElementById('gameModal').classList.add('show');
+}
+
+function inviteGame(targetId, gameType) {
+    ws.send(JSON.stringify({ type: 'game_invite', targetId, game: gameType }));
+    document.getElementById('gameInviteStatus').innerHTML = '<div class="game-info">⏳ 邀请已发送，等待对方接受...</div>';
+}
+
+let currentOnlineGame = null;
+
+function openOnlineGame(data) {
+    currentGameId = data.gameId;
+    const gc = document.getElementById('gameContent');
+    const gt = document.getElementById('gameTitle');
+    gt.textContent = '🎮 ' + (data.gameName || data.game);
+
+    const myIdx = data.playerOrder.indexOf(data.yourId);
+    const oppIdx = 1 - myIdx;
+    const oppName = data.players[data.playerOrder[oppIdx]] || '对手';
+
+    currentOnlineGame = { data, myIdx, oppName, gameType: data.game };
+
+    if (data.game === 'tictactoe') {
+        renderTicTacToe(data, myIdx, oppName);
+    } else if (data.game === 'gomoku') {
+        renderGomoku(data, myIdx, oppName);
+    } else if (data.game === 'rps') {
+        renderRPS(data, myIdx, oppName);
+    } else if (data.game === 'guessnumber') {
+        renderGuessNumber(data, myIdx, oppName);
+    } else if (data.game === 'connect4') {
+        renderConnect4(data, myIdx, oppName);
+    } else if (data.game === 'hangman') {
+        renderHangman(data, myIdx, oppName);
+    }
+
+    document.getElementById('gameModal').classList.add('show');
+}
+
+function updateGameState(msg) {
+    if (!currentOnlineGame) return;
+    const { data, myIdx, oppName, gameType } = currentOnlineGame;
+    // 更新 data.state
+    data.state = msg;
+
+    if (gameType === 'tictactoe') renderTicTacToe(data, myIdx, oppName);
+    else if (gameType === 'gomoku') renderGomoku(data, myIdx, oppName);
+    else if (gameType === 'rps') renderRPS(data, myIdx, oppName);
+    else if (gameType === 'guessnumber') renderGuessNumber(data, myIdx, oppName);
+    else if (gameType === 'connect4') renderConnect4(data, myIdx, oppName);
+    else if (gameType === 'hangman') renderHangman(data, myIdx, oppName);
+}
+
+function closeGame() {
+    document.getElementById('gameModal').classList.remove('show');
+    if (currentGameId && ws && ws.readyState === 1) {
+        ws.send(JSON.stringify({ type: 'game_leave', gameId: currentGameId }));
+    }
+    currentGameId = null;
+    currentOnlineGame = null;
+}
+
+// ---- 井字棋 ----
+function renderTicTacToe(data, myIdx, oppName) {
+    const state = data.state;
+    const gc = document.getElementById('gameContent');
+    const myMark = myIdx === 0 ? 'X' : 'O';
+    const turn = state.turn === undefined ? 0 : state.turn;
+    const isMyTurn = turn === myIdx;
+    const board = state.board || Array(9).fill(null);
+    const winner = state.winner;
+
+    let html = `<div class="game-info">你: ${myMark} | 对手: ${oppName} ${winner !== null && winner !== undefined ? '' : (isMyTurn ? '🎯 你的回合' : '⏳ 对手回合')}</div>`;
+    html += '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px;width:240px;margin:0 auto">';
+
+    const marks = ['X','O'];
+    board.forEach((cell, i) => {
+        const disabled = cell || (winner !== null && winner !== undefined) || !isMyTurn ? 'disabled' : '';
+        const val = cell === null ? '' : cell;
+        html += `<div onclick="${disabled ? '' : `sendGameMove({pos:${i}})`}" style="width:76px;height:76px;background:var(--bg);border:2px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:32px;font-weight:bold;cursor:${disabled?'not-allowed':'pointer'};border-radius:6px;color:${val==='X'?'#e74c3c':'#3498db'}">${val}</div>`;
+    });
+    html += '</div>';
+
+    if (winner !== null && winner !== undefined) {
+        if (winner === -1) html += '<div class="game-info">🤝 平局！</div>';
+        else if (winner === myIdx) html += '<div class="game-info">🎉 你赢了！</div>';
+        else html += '<div class="game-info">😞 ' + oppName + ' 赢了</div>';
+        html += '<div class="game-btns"><button class="btn-primary" onclick="ws.send(JSON.stringify({type:\'game_rematch_req\',gameId:' + currentGameId + '}))">再来一局</button><button class="btn-danger" onclick="closeGame()">退出</button></div>';
+    }
+
+    gc.innerHTML = html;
+}
+
+// ---- 五子棋 ----
+function renderGomoku(data, myIdx, oppName) {
+    const state = data.state;
+    const gc = document.getElementById('gameContent');
+    const turn = state.turn || 0;
+    const isMyTurn = turn === myIdx;
+    const board = state.board || Array(15).fill(null).map(()=>Array(15).fill(null));
+    const winner = state.winner;
+    const lastMove = state.lastMove;
+
+    let html = `<div class="game-info">⚫ 你: 黑子 | ⚪ 对手: ${oppName} ${winner!==null&&winner!==undefined?'':(isMyTurn?'🎯 你的回合':'⏳ 对手回合')}</div>`;
+    const cellSize = 28;
+    const padding = 16;
+    const boardSize = cellSize * 14 + padding * 2;
+    html += `<canvas id="gomokuCanvas" width="${boardSize}" height="${boardSize}" style="cursor:${isMyTurn?'pointer':'not-allowed'}"></canvas>`;
+    html += '<div id="gomokuResult"></div>';
+
+    gc.innerHTML = html;
+
+    const canvas = document.getElementById('gomokuCanvas');
+    const ctx = canvas.getContext('2d');
+
+    function drawBoard() {
+        ctx.fillStyle = '#d4a056';
+        ctx.fillRect(0, 0, boardSize, boardSize);
+
+        // 画线
+        ctx.strokeStyle = '#8b6914';
+        ctx.lineWidth = 1;
+        for (let i = 0; i < 15; i++) {
+            ctx.beginPath(); ctx.moveTo(padding, padding + i*cellSize); ctx.lineTo(boardSize-padding, padding + i*cellSize); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(padding + i*cellSize, padding); ctx.lineTo(padding + i*cellSize, boardSize-padding); ctx.stroke();
+        }
+
+        // 画星位
+        const starPoints = [[3,3],[3,7],[3,11],[7,3],[7,7],[7,11],[11,3],[11,7],[11,11]];
+        ctx.fillStyle = '#8b6914';
+        starPoints.forEach(([r,c]) => {
+            ctx.beginPath(); ctx.arc(padding + c*cellSize, padding + r*cellSize, 3, 0, 2*Math.PI); ctx.fill();
+        });
+
+        // 画棋子
+        for (let r = 0; r < 15; r++) {
+            for (let c = 0; c < 15; c++) {
+                if (board[r][c] !== null) {
+                    const x = padding + c*cellSize, y = padding + r*cellSize;
+                    ctx.beginPath(); ctx.arc(x, y, cellSize/2-2, 0, 2*Math.PI);
+                    ctx.fillStyle = board[r][c] === 0 ? '#222' : '#fff';
+                    ctx.fill();
+                    if (board[r][c] === 1) {
+                        ctx.strokeStyle = '#ccc'; ctx.lineWidth = 1; ctx.stroke();
+                    }
+                    // 最后一手标记
+                    if (lastMove && lastMove.r === r && lastMove.c === c) {
+                        ctx.fillStyle = '#e74c3c';
+                        ctx.beginPath(); ctx.arc(x, y, 4, 0, 2*Math.PI); ctx.fill();
+                    }
+                }
+            }
+        }
+    }
+
+    drawBoard();
+
+    canvas.onclick = (e) => {
+        if (!isMyTurn || (winner !== null && winner !== undefined)) return;
+        const rect = canvas.getBoundingClientRect();
+        const scaleX = canvas.width / rect.width;
+        const scaleY = canvas.height / rect.height;
+        const x = (e.clientX - rect.left) * scaleX;
+        const y = (e.clientY - rect.top) * scaleY;
+        const c = Math.round((x - padding) / cellSize);
+        const r = Math.round((y - padding) / cellSize);
+        if (r < 0 || r > 14 || c < 0 || c > 14) return;
+        if (board[r][c] !== null) return;
+        sendGameMove({ r, c });
+    };
+
+    if (winner !== null && winner !== undefined) {
+        const resultEl = document.getElementById('gomokuResult');
+        if (winner === -1) resultEl.innerHTML = '<div class="game-info">🤝 平局！</div>';
+        else if (winner === myIdx) resultEl.innerHTML = '<div class="game-info">🎉 你赢了！</div>';
+        else resultEl.innerHTML = '<div class="game-info">😞 ' + oppName + ' 赢了</div>';
+        resultEl.innerHTML += '<div class="game-btns"><button class="btn-primary" onclick="ws.send(JSON.stringify({type:\'game_rematch_req\',gameId:' + currentGameId + '}))">再来一局</button><button class="btn-danger" onclick="closeGame()">退出</button></div>';
+    }
+}
+
+// ---- 石头剪刀布 ----
+function renderRPS(data, myIdx, oppName) {
+    const state = data.state;
+    const gc = document.getElementById('gameContent');
+    const result = state.result;
+
+    let html = `<div class="game-info">✊ 石头剪刀布 vs ${oppName} (第${state.round||1}局)</div>`;
+    html += '<div style="display:flex;justify-content:center;gap:16px;margin:16px 0">';
+
+    if (!result) {
+        ['rock','paper','scissors'].forEach((c,i) => {
+            const icons = ['✊','📄','✌️'];
+            const labels = ['石头','布','剪刀'];
+            html += `<button class="btn-primary" onclick="sendGameMove({choice:'${c}'})" style="font-size:24px;padding:16px 24px">${icons[i]} ${labels[i]}</button>`;
+        });
+    }
+    html += '</div>';
+
+    if (result) {
+        const icons = ['✊','📄','✌️'];
+        const labels = ['石头','布','剪刀'];
+        const myChoice = myIdx === 0 ? result.p0 : result.p1;
+        const oppChoice = myIdx === 0 ? result.p1 : result.p0;
+        const myIcon = icons[['rock','paper','scissors'].indexOf(myChoice)];
+        const oppIcon = icons[['rock','paper','scissors'].indexOf(oppChoice)];
+
+        html += `<div style="text-align:center;margin:12px">
+            <div style="font-size:48px">你: ${myIcon}  vs  ${oppIcon} :对手</div>
+            <div style="font-size:20px;margin-top:8px">${result.winner === -1 ? '🤝 平局!' : (result.winner === myIdx ? '🎉 你赢了!' : '😞 你输了')}</div>
+        </div>`;
+        html += '<div class="game-btns">';
+        html += `<button class="btn-primary" onclick="sendGameMove({choice:'rock'})">再来一局</button>`;
+        html += `<button class="btn-danger" onclick="closeGame()">退出</button>`;
+        html += '</div>';
+    }
+
+    gc.innerHTML = html;
+}
+
+// ---- 猜数字 ----
+function renderGuessNumber(data, myIdx, oppName) {
+    const state = data.state;
+    const gc = document.getElementById('gameContent');
+    const players = data.players;
+    const playerNames = data.playerOrder.map(pid => players[pid] || '#'+pid);
+
+    let html = `<div class="game-info">🔢 猜数字 (1-100) ${state.phase === 'picking' ? '🎯 请选择出题人' : ''}</div>`;
+
+    if (state.phase === 'picking') {
+        html += `<div style="text-align:center;margin:12px">
+            <div style="margin-bottom:8px">选择出题人：</div>`;
+        playerNames.forEach((name, i) => {
+            html += `<button class="btn-primary" onclick="sendGameMove({number:prompt('请输入1-100的数字:')})" style="margin:4px">${name} 出题</button>`;
+        });
+        html += '</div>';
+    } else if (state.phase === 'guessing') {
+        const isPicker = state.picker === myIdx;
+        if (isPicker) {
+            html += `<div class="game-info">你出了题，等待大家猜...</div>`;
+        } else {
+            html += `<div style="text-align:center;margin:12px">
+                <input type="number" id="guessInput" min="1" max="100" style="padding:10px;width:120px;font-size:18px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);text-align:center" onkeydown="if(event.key==='Enter')sendGameMove({guess:parseInt(this.value)})">
+                <button class="btn-primary" onclick="sendGameMove({guess:parseInt(document.getElementById('guessInput').value)})" style="margin-left:8px">猜！</button>
+            </div>`;
+        }
+
+        if (state.guesses && state.guesses.length) {
+            html += '<div style="max-height:200px;overflow-y:auto;margin:8px 0;font-size:13px">';
+            state.guesses.forEach(g => {
+                html += `<div style="padding:4px 8px">${g.playerName}: ${g.guess} ${g.hint||''} ${g.exact?'🎉':''}</div>`;
+            });
+            html += '</div>';
+        }
+    } else if (state.phase === 'ended') {
+        html += `<div class="game-info">🎉 ${state.message || '游戏结束！'}</div>`;
+        html += '<div class="game-btns"><button class="btn-primary" onclick="ws.send(JSON.stringify({type:\'game_rematch_req\',gameId:'+currentGameId+'}))">再来一局</button><button class="btn-danger" onclick="closeGame()">退出</button></div>';
+    }
+
+    gc.innerHTML = html;
+}
+
+// ---- 四子棋 ----
+function renderConnect4(data, myIdx, oppName) {
+    const state = data.state;
+    const gc = document.getElementById('gameContent');
+    const board = state.board || Array(6).fill(null).map(()=>Array(7).fill(null));
+    const turn = state.turn || 0;
+    const isMyTurn = turn === myIdx;
+    const winner = state.winner;
+    const lastMove = state.lastMove;
+
+    const cellSize = 50;
+    const cols = 7, rows = 6;
+    const width = cols * cellSize, height = rows * cellSize;
+
+    let html = `<div class="game-info">🟡 四子棋 vs ${oppName} ${winner!==null&&winner!==undefined?'':(isMyTurn?'🎯 你的回合(点击列落子)':'⏳ 对手回合')}</div>`;
+    html += `<canvas id="c4Canvas" width="${width}" height="${height}" style="cursor:${isMyTurn?'pointer':'not-allowed'};background:#1a3a5c;border-radius:8px"></canvas>`;
+
+    gc.innerHTML = html;
+
+    const canvas = document.getElementById('c4Canvas');
+    const ctx = canvas.getContext('2d');
+
+    function drawC4() {
+        ctx.clearRect(0, 0, width, height);
+        // 画格子
+        for (let r = 0; r < rows; r++) {
+            for (let c = 0; c < cols; c++) {
+                const x = c * cellSize + 2, y = r * cellSize + 2;
+                ctx.fillStyle = '#0d2137';
+                ctx.beginPath(); ctx.arc(x + cellSize/2-2, y + cellSize/2-2, cellSize/2-4, 0, 2*Math.PI); ctx.fill();
+                if (board[r][c] !== null) {
+                    ctx.beginPath(); ctx.arc(x + cellSize/2-2, y + cellSize/2-2, cellSize/2-6, 0, 2*Math.PI);
+                    ctx.fillStyle = board[r][c] === 0 ? '#e74c3c' : '#f1c40f';
+                    ctx.fill();
+                    // 最后一手高亮
+                    if (lastMove && lastMove.row === r && lastMove.col === c) {
+                        ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
+                    }
+                }
+            }
+        }
+    }
+
+    drawC4();
+
+    canvas.onclick = (e) => {
+        if (!isMyTurn || (winner !== null && winner !== undefined)) return;
+        const rect = canvas.getBoundingClientRect();
+        const scale = canvas.width / rect.width;
+        const c = Math.floor((e.clientX - rect.left) * scale / cellSize);
+        if (c < 0 || c > 6) return;
+        sendGameMove({ col: c });
+    };
+
+    if (winner !== null && winner !== undefined) {
+        let resultHtml = '<div class="game-btns" style="margin-top:8px">';
+        if (winner === -1) resultHtml += '<div class="game-info">🤝 平局！</div>';
+        else if (winner === myIdx) resultHtml += '<div class="game-info">🎉 你赢了！</div>';
+        else resultHtml += '<div class="game-info">😞 ' + oppName + ' 赢了</div>';
+        resultHtml += `<button class="btn-primary" onclick="ws.send(JSON.stringify({type:'game_rematch_req',gameId:${currentGameId}}))">再来一局</button>`;
+        resultHtml += `<button class="btn-danger" onclick="closeGame()">退出</button></div>`;
+        gc.innerHTML += resultHtml;
+    }
+}
+
+// ---- 猜单词 ----
+function renderHangman(data, myIdx, oppName) {
+    const state = data.state;
+    const gc = document.getElementById('gameContent');
+    const playerNames = data.playerOrder.map(pid => data.players[pid] || '#'+pid);
+
+    let html = `<div class="game-info">💀 猜单词 vs ${oppName}</div>`;
+
+    if (state.phase === 'picking') {
+        const isPicker = state.picker === myIdx || !state.picker;
+        if (isPicker) {
+            html += `<div style="text-align:center;margin:12px">
+                <div style="margin-bottom:8px">你是出题人，输入一个英文单词：</div>
+                <input type="text" id="wordInput" style="padding:10px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:16px;text-align:center" onkeydown="if(event.key==='Enter')sendGameMove({word:this.value})">
+                <button class="btn-primary" onclick="sendGameMove({word:document.getElementById('wordInput').value})" style="margin-left:8px">确定</button>
+            </div>`;
+        } else {
+            html += '<div class="game-info">等待出题人输入单词...</div>';
+        }
+    } else if (state.phase === 'guessing') {
+        const isPicker = state.picker === myIdx;
+        const display = (state.display || []).join(' ');
+        const wrong = state.wrong || 0;
+        const maxWrong = state.maxWrong || 6;
+
+        // 画小人
+        html += '<div style="text-align:center;font-family:monospace;font-size:14px;line-height:1.2;margin:8px;background:var(--bg);padding:8px;border-radius:6px"><pre>';
+        const stages = [
+            '',
+            ' O ',
+            ' O \
+ | ',
+            ' O \
+/| ',
+            ' O \
+/|\\',
+            ' O \
+/|\\\
+/ ',
+            ' O \
+/|\\\
+/ \\'
+        ];
+        html += stages[wrong] || '';
+        html += '</pre></div>';
+
+        html += `<div style="text-align:center;font-size:28px;letter-spacing:6px;margin:12px">${display}</div>`;
+        html += `<div style="text-align:center;font-size:13px;color:var(--text2)">已猜: ${(state.guessed||[]).join(' ')} | 错误: ${wrong}/${maxWrong}</div>`;
+
+        if (!isPicker) {
+            html += `<div style="text-align:center;margin:12px">
+                <input type="text" id="letterInput" maxlength="1" style="width:50px;padding:10px;font-size:18px;text-align:center;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text)" onkeydown="if(event.key==='Enter')sendGameMove({letter:this.value})">
+                <button class="btn-primary" onclick="sendGameMove({letter:document.getElementById('letterInput').value})" style="margin-left:8px">猜字母</button>
+            </div>`;
+        } else {
+            html += '<div class="game-info">你出的题，等待大家猜...</div>';
+        }
+    } else if (state.phase === 'ended') {
+        html += `<div style="text-align:center;font-size:24px;letter-spacing:4px;margin:12px">${(state.display||[]).join(' ')}</div>`;
+        html += `<div class="game-info">${state.winner === myIdx ? '🎉 你赢了！' : '😞 ' + oppName + ' 赢了'}</div>`;
+        html += `<div class="game-info">单词是: <b>${state.word}</b></div>`;
+        html += '<div class="game-btns"><button class="btn-primary" onclick="ws.send(JSON.stringify({type:\'game_rematch_req\',gameId:'+currentGameId+'}))">再来一局</button><button class="btn-danger" onclick="closeGame()">退出</button></div>';
+    }
+
+    gc.innerHTML = html;
+}
+
+function sendGameMove(data) {
+    if (currentGameId && ws && ws.readyState === 1) {
+        ws.send(JSON.stringify({ type: 'game_move', gameId: currentGameId, data }));
+    }
+}
+
+// ============================================================
+//  离线游戏
+// ============================================================
+function launchOfflineGame(gameId) {
+    const gc = document.getElementById('gameContent');
+    const gt = document.getElementById('gameTitle');
+    const g = OFFLINE_GAMES.find(x => x.id === gameId);
+    gt.textContent = '🎮 ' + (g ? g.name : gameId);
+
+    document.getElementById('gameModal').classList.add('show');
+
+    // 加载对应游戏
+    const gameFuncs = {
+        snake: renderSnake,
+        tetris: renderTetris,
+        minesweeper: renderMinesweeper,
+        breakout: renderBreakout,
+        sudoku: renderSudoku,
+        flappy: renderFlappyBird,
+        memory: renderMemory,
+        sliding: renderSlidingPuzzle,
+        breakout: renderBreakout,
+        dino: renderDinoRun,
+        solitaire: renderSolitaire,
+        tictactoe_ai: renderTicTacToeAI,
+        simon: renderSimon,
+        whack: renderWhackAMole
+    };
+
+    const fn = gameFuncs[gameId];
+    if (fn) {
+        gc.innerHTML = '';
+        setTimeout(() => fn(), 50);
+    } else {
+        gc.innerHTML = '<div class="game-info">游戏加载中...</div>';
+    }
+}
+
+// ---- 贪吃蛇 ----
+function renderSnake() {
+    const gc = document.getElementById('gameContent');
+    const size = 400, grid = 20, cells = size / grid;
+    let snake = [{x:10,y:10}], dir = {x:1,y:0}, nextDir = {x:1,y:0};
+    let food = {x:15,y:10}, score = 0, running = true, gameOver = false, timer = null;
+
+    function placeFood() {
+        while (true) {
+            const f = {x:Math.floor(Math.random()*cells),y:Math.floor(Math.random()*cells)};
+            if (!snake.some(s => s.x===f.x && s.y===f.y)) { food = f; break; }
+        }
+    }
+
+    gc.innerHTML = `<div style="text-align:center"><canvas id="snakeCanvas" width="${size}" height="${size}" style="background:#111;border-radius:8px"></canvas>
+        <div class="game-info" style="margin-top:8px">分数: <b id="snakeScore">0</b> | 方向键控制</div>
+        <div class="game-btns"><button class="btn-primary" onclick="restartSnake()">重新开始</button><button class="btn-danger" onclick="closeGame()">退出</button></div></div>`;
+
+    const canvas = document.getElementById('snakeCanvas');
+    const ctx = canvas.getContext('2d');
+
+    window.restartSnake = () => {
+        if (timer) clearInterval(timer);
+        snake = [{x:10,y:10}]; dir = {x:1,y:0}; nextDir = {x:1,y:0};
+        score = 0; running = true; gameOver = false;
+        placeFood(); timer = setInterval(update, 120);
+    };
+
+    document.onkeydown = (e) => {
+        if (e.key.startsWith('Arrow')) e.preventDefault();
+        if (!running) return;
+        const k = e.key;
+        if (k==='ArrowUp' && dir.y!==1) nextDir = {x:0,y:-1};
+        if (k==='ArrowDown' && dir.y!==-1) nextDir = {x:0,y:1};
+        if (k==='ArrowLeft' && dir.x!==1) nextDir = {x:-1,y:0};
+        if (k==='ArrowRight' && dir.x!==-1) nextDir = {x:1,y:0};
+    };
+
+    function update() {
+        if (!running) return;
+        dir = nextDir;
+        const head = {x:snake[0].x+dir.x, y:snake[0].y+dir.y};
+        if (head.x<0||head.x>=cells||head.y<0||head.y>=cells||snake.some(s=>s.x===head.x&&s.y===head.y)) {
+            running = false; gameOver = true;
+            if (timer) clearInterval(timer);
+            draw(); return;
+        }
+        snake.unshift(head);
+        if (head.x===food.x && head.y===food.y) {
+            score++; document.getElementById('snakeScore').textContent = score;
+            placeFood();
+        } else {
+            snake.pop();
+        }
+        draw();
+    }
+
+    function draw() {
+        ctx.fillStyle = '#111'; ctx.fillRect(0,0,size,size);
+        // 食物
+        ctx.fillStyle = '#e74c3c'; ctx.beginPath(); ctx.arc(food.x*grid+grid/2, food.y*grid+grid/2, grid/2-2,0,2*Math.PI); ctx.fill();
+        // 蛇
+        snake.forEach((s,i) => {
+            ctx.fillStyle = i===0 ? '#2ecc71' : '#27ae60';
+            ctx.fillRect(s.x*grid+1, s.y*grid+1, grid-2, grid-2);
+        });
+        if (gameOver) {
+            ctx.fillStyle = 'rgba(0,0,0,.6)'; ctx.fillRect(0,0,size,size);
+            ctx.fillStyle = '#fff'; ctx.font = '24px sans-serif'; ctx.textAlign = 'center';
+            ctx.fillText('游戏结束', size/2, size/2-10);
+            ctx.font = '16px sans-serif'; ctx.fillText('得分: '+score, size/2, size/2+20);
+        }
+    }
+
+    placeFood();
+    timer = setInterval(update, 120);
+    draw();
+}
+
+// ---- 离线游戏 (iframe加载) ----
+function renderBreakout() {
+    const gc = document.getElementById('gameContent');
+    gc.innerHTML = '<div style="width:100%;min-height:420px"><iframe src="/games/breakout.html" style="width:100%;height:420px;border:none;border-radius:8px;background:#111"></iframe></div>';
+}
+function renderSudoku() {
+    const gc = document.getElementById('gameContent');
+    gc.innerHTML = '<div style="width:100%;min-height:420px"><iframe src="/games/sudoku.html" style="width:100%;height:420px;border:none;border-radius:8px;background:#111"></iframe></div>';
+}
+function renderFlappyBird() {
+    const gc = document.getElementById('gameContent');
+    gc.innerHTML = '<div style="width:100%;min-height:400px"><iframe src="/games/flappy.html" style="width:100%;height:400px;border:none;border-radius:8px;background:#111"></iframe></div>';
+}
+function renderMemory() {
+    const gc = document.getElementById('gameContent');
+    gc.innerHTML = '<div style="width:100%;min-height:420px"><iframe src="/games/memory.html" style="width:100%;height:420px;border:none;border-radius:8px;background:#111"></iframe></div>';
+}
+function renderSlidingPuzzle() {
+    const gc = document.getElementById('gameContent');
+    gc.innerHTML = '<div style="width:100%;min-height:420px"><iframe src="/games/sliding.html" style="width:100%;height:420px;border:none;border-radius:8px;background:#111"></iframe></div>';
+}
+function renderBreakout() {
+    const gc = document.getElementById('gameContent');
+    gc.innerHTML = '<div style="width:100%;min-height:420px"><iframe src="/games/breakout.html" style="width:100%;height:420px;border:none;border-radius:8px;background:#111"></iframe></div>';
+}
+function renderDinoRun() {
+    const gc = document.getElementById('gameContent');
+    gc.innerHTML = '<div style="width:100%;min-height:400px"><iframe src="/games/dino.html" style="width:100%;height:400px;border:none;border-radius:8px;background:#111"></iframe></div>';
+}
+function renderSolitaire() {
+    const gc = document.getElementById('gameContent');
+    gc.innerHTML = '<div style="width:100%;min-height:420px"><iframe src="/games/solitaire.html" style="width:100%;height:420px;border:none;border-radius:8px;background:#111"></iframe></div>';
+}
+function renderTicTacToeAI() {
+    const gc = document.getElementById('gameContent');
+    gc.innerHTML = '<div style="width:100%;min-height:420px"><iframe src="/games/tictactoe_ai.html" style="width:100%;height:420px;border:none;border-radius:8px;background:#111"></iframe></div>';
+}
+function renderSimon() {
+    const gc = document.getElementById('gameContent');
+    gc.innerHTML = '<div style="width:100%;min-height:420px"><iframe src="/games/simon.html" style="width:100%;height:420px;border:none;border-radius:8px;background:#111"></iframe></div>';
+}
+function renderWhackAMole() {
+    const gc = document.getElementById('gameContent');
+    gc.innerHTML = '<div style="width:100%;min-height:420px"><iframe src="/games/whack.html" style="width:100%;height:420px;border:none;border-radius:8px;background:#111"></iframe></div>';
+}
+function renderMinesweeper() {
+    const gc = document.getElementById('gameContent');
+    gc.innerHTML = '<div style="width:100%;min-height:420px"><iframe src="/games/minesweeper.html" style="width:100%;height:420px;border:none;border-radius:8px;background:#111"></iframe></div>';
+}
+function renderTetris() {
+    const gc = document.getElementById('gameContent');
+    gc.innerHTML = '<div style="width:100%;min-height:500px"><iframe src="/games/tetris.html" style="width:100%;height:500px;border:none;border-radius:8px;background:#111"></iframe></div>';
+}
+
+// ============================================================
+//  封禁/禁言 通知弹窗
+// ============================================================
+function showAlertModal(title, info, allowClose) {
+    const modal = document.getElementById('alertModal');
+    document.getElementById('alertTitle').textContent = title;
+    document.getElementById('alertInfo').innerHTML = info;
+    modal.classList.add('show');
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    applyLang();
+    document.getElementById('alertCloseBtn').addEventListener('click', function() {
+        document.getElementById('alertModal').classList.remove('show');
+    });
+});
+
+initGameList();
+</script>
+</body>
+</html>

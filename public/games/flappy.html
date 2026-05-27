@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><title>Flappy Bird</title>
+<style>*{margin:0;padding:0;box-sizing:border-box}body{background:#111;display:flex;justify-content:center;align-items:center;min-height:100vh;font-family:sans-serif}
+canvas{background:#4dc9f6;border-radius:8px;display:block}.info{text-align:center;color:#fff;margin:8px;font-size:14px}.controls{text-align:center;margin-top:8px}.controls button{padding:6px 16px;border:none;border-radius:4px;cursor:pointer;background:#6c5ce7;color:#fff;font-size:13px}
+</style></head>
+<body><div>
+<canvas id="c" width="350" height="400"></canvas>
+<div class="info">按 空格/点击 飞行 | 分数: <b id="score">0</b></div>
+<div class="controls"><button onclick="initGame()">重新开始</button></div>
+</div>
+<script>
+const c=document.getElementById('c'),ctx=c.getContext('2d');
+let bird, pipes, score, gameOver, timer;
+const GRAVITY=.45, JUMP=-6, PIPE_W=40, GAP=120, SPEED=2;
+
+function initGame(){
+    bird={x:80,y:200,vy:0};
+    pipes=[];
+    score=0;
+    gameOver=false;
+    document.getElementById('score').textContent='0';
+    if(timer)clearInterval(timer);
+    timer=setInterval(update,20);
+}
+
+function jump(){
+    if(gameOver){initGame();return}
+    bird.vy=JUMP;
+}
+
+function update(){
+    bird.vy+=GRAVITY;
+    bird.y+=bird.vy;
+
+    if(pipes.length===0||pipes[pipes.length-1].x<200){
+        const topH=50+Math.random()*150;
+        pipes.push({x:350,top:topH,bottom:topH+GAP,scored:false});
+    }
+
+    for(let i=pipes.length-1;i>=0;i--){
+        pipes[i].x-=SPEED;
+        if(pipes[i].x<-PIPE_W)pipes.splice(i,1);
+    }
+
+    // 碰撞
+    if(bird.y<0||bird.y>400)gameOver=true;
+    for(const p of pipes){
+        if(bird.x+15>p.x&&bird.x-15<p.x+PIPE_W){
+            if(bird.y-15<p.top||bird.y+15>p.bottom)gameOver=true;
+        }
+        if(!p.scored&&p.x+PIPE_W<bird.x){score++;p.scored=true;document.getElementById('score').textContent=score}
+    }
+
+    if(gameOver&&timer){clearInterval(timer);timer=null}
+    draw();
+}
+
+function draw(){
+    ctx.fillStyle='#4dc9f6';ctx.fillRect(0,0,350,400);
+    // 管道
+    ctx.fillStyle='#27ae60';
+    for(const p of pipes){
+        ctx.fillRect(p.x,0,PIPE_W,p.top);
+        ctx.fillRect(p.x,p.bottom,PIPE_W,400-p.bottom);
+        ctx.fillStyle='#2ecc71';
+        ctx.fillRect(p.x-3,p.top-20,PIPE_W+6,20);
+        ctx.fillRect(p.x-3,p.bottom,PIPE_W+6,20);
+        ctx.fillStyle='#27ae60';
+    }
+    // 鸟
+    ctx.fillStyle='#f1c40f';
+    ctx.beginPath();ctx.arc(bird.x,bird.y,12,0,2*Math.PI);ctx.fill();
+    ctx.fillStyle='#e67e22';
+    ctx.beginPath();ctx.arc(bird.x+6,bird.y-3,4,0,2*Math.PI);ctx.fill();
+    ctx.fillStyle='#e74c3c';
+    ctx.beginPath();ctx.moveTo(bird.x+10,bird.y);ctx.lineTo(bird.x+20,bird.y-2);ctx.lineTo(bird.x+20,bird.y+2);ctx.fill();
+
+    if(gameOver){
+        ctx.fillStyle='rgba(0,0,0,.5)';ctx.fillRect(0,0,350,400);
+        ctx.fillStyle='#fff';ctx.font='24px sans-serif';ctx.textAlign='center';
+        ctx.fillText('游戏结束',175,180);
+        ctx.font='16px sans-serif';ctx.fillText('分数: '+score,175,220);
+    }
+}
+
+document.onkeydown=e=>{if(e.key===' '||e.key==='Space'){e.preventDefault();jump()}};
+c.onclick=jump;
+initGame();
+</script>
+</body></html>

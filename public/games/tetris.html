@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><title>俄罗斯方块</title>
+<style>*{margin:0;padding:0;box-sizing:border-box}body{background:#111;display:flex;justify-content:center;align-items:center;min-height:100vh;font-family:sans-serif;color:#fff;gap:16px}
+.game{text-align:center}.board{display:grid;grid-template-columns:repeat(10,1fr);gap:1px;width:240px;margin:0 auto}
+.cell{height:23px;background:rgba(255,255,255,.06);border-radius:2px}.cell.i{background:#00f0f0}.cell.o{background:#f0f000}.cell.t{background:#a000f0}.cell.s{background:#00f000}.cell.z{background:#f00000}.cell.j{background:#0000f0}.cell.l{background:#f0a000}.info{font-size:13px;color:#9898b8;margin:8px}
+.controls button{padding:5px 12px;margin:2px;border:none;border-radius:4px;cursor:pointer;background:#6c5ce7;color:#fff;font-size:13px}
+#nextPiece{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;width:80px;margin:8px auto}.next-cell{height:18px;background:rgba(255,255,255,.06);border-radius:2px}
+</style></head>
+<body><div class="game">
+<div class="info">分数: <b id="score">0</b></div>
+<div id="board" class="board"></div>
+<div class="controls"><button onclick="init()">新游戏</button></div>
+</div>
+<div style="text-align:center"><div class="info">下一个</div><div id="nextPiece"></div>
+<div class="controls" style="margin-top:8px"><button onclick="movePiece('left')">←</button><button onclick="movePiece('rotate')">↻</button><button onclick="movePiece('right')">→</button><br><button onclick="movePiece('drop')">↓</button></div></div>
+<script>
+const SIZE=10,H=20;let board,cur,timer,score=0,gameOver=false;
+const PIECES=[{shape:[[1,1,1,1]],color:'i'},{shape:[[1,1],[1,1]],color:'o'},{shape:[[0,1,0],[1,1,1]],color:'t'},{shape:[[0,1,1],[1,1,0]],color:'s'},{shape:[[1,1,0],[0,1,1]],color:'z'},{shape:[[1,0,0],[1,1,1]],color:'j'},{shape:[[0,0,1],[1,1,1]],color:'l'}];
+function randPiece(){return JSON.parse(JSON.stringify(PIECES[Math.floor(Math.random()*PIECES.length)]))}
+let next = randPiece();
+function init(){board=Array(H).fill(null).map(()=>Array(SIZE).fill(0));score=0;gameOver=false;document.getElementById('score').textContent='0';spawn();render();if(timer)clearInterval(timer);timer=setInterval(tick,400)}
+function spawn(){if(!next)next=randPiece();cur={piece:next,rot:0,r:0,c:3};next=randPiece();if(!canPlace(cur.piece.shape,cur.r,cur.c)){gameOver=true;clearInterval(timer)}renderNext()}
+function canPlace(shape,r,c){for(let ri=0;ri<shape.length;ri++)for(let ci=0;ci<shape[0].length;ci++){if(!shape[ri][ci])continue;const nr=r+ri,nc=c+ci;if(nc<0||nc>=SIZE||nr>=H||nr<0)return false;if(nr>=0&&board[nr][nc])return false}return true}
+function place(){const s=cur.piece.shape;for(let ri=0;ri<s.length;ri++)for(let ci=0;ci<s[0].length;ci++){if(!s[ri][ci])continue;const r=cur.r+ri,c=cur.c+ci;if(r>=0)board[r][c]=cur.piece.color}let cleared=0;for(let r=H-1;r>=0;r--){if(board[r].every(c=>c)){board.splice(r,1);board.unshift(Array(SIZE).fill(0));cleared++;r++}}if(cleared){score+=[0,100,300,500,800][cleared];document.getElementById('score').textContent=score}spawn()}
+function tick(){if(gameOver)return;if(canPlace(cur.piece.shape,cur.r+1,cur.c))cur.r++;else place();render()}
+function movePiece(dir){if(gameOver||!cur)return;if(dir==='left'&&canPlace(cur.piece.shape,cur.r,cur.c-1))cur.c--;else if(dir==='right'&&canPlace(cur.piece.shape,cur.r,cur.c+1))cur.c++;else if(dir==='rotate'){const s=cur.piece.shape;const rot=Array(s[0].length).fill(null).map((_,ci)=>s.map((_,ri)=>s[s.length-1-ri][ci]));if(canPlace(rot,cur.r,cur.c))cur.piece.shape=rot}else if(dir==='drop'){while(canPlace(cur.piece.shape,cur.r+1,cur.c))cur.r++;place()}render()}
+document.onkeydown=e=>{if(e.key.startsWith('Arrow')){e.preventDefault();const m={ArrowLeft:'left',ArrowRight:'right',ArrowUp:'rotate',ArrowDown:'drop'}[e.key];if(m)movePiece(m)}};
+function render(){const b=document.getElementById('board');b.innerHTML='';for(let r=0;r<H;r++){for(let c=0;c<SIZE;c++){let color=board[r][c];if(cur&&!gameOver){const s=cur.piece.shape;for(let ri=0;ri<s.length;ri++)for(let ci=0;ci<s[0].length;ci++)if(s[ri][ci]&&r===cur.r+ri&&c===cur.c+ci)color=cur.piece.color}const d=document.createElement('div');d.className='cell'+(color?' '+color:'');b.appendChild(d)}}}
+function renderNext(){const n=document.getElementById('nextPiece');n.innerHTML='';for(let r=0;r<next.shape.length;r++)for(let c=0;c<next.shape[0].length;c++){const d=document.createElement('div');d.className='next-cell'+(next.shape[r][c]?' '+next.color:'');n.appendChild(d)}}
+init();
+</script>
+</body></html>

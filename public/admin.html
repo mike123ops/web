@@ -1,0 +1,824 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>后台管理</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, 'Segoe UI', Arial, sans-serif; background: #0f0f1a; color: #e0e0e0; min-height: 100vh; }
+.login-page { display:flex; align-items:center; justify-content:center; min-height:100vh; }
+.login-box { background:#1a1a2e; padding:40px; border-radius:12px; width:380px; box-shadow:0 8px 32px rgba(0,0,0,.5); }
+.login-box h2 { text-align:center; margin-bottom:24px; font-size:22px; }
+.login-box label { display:block; font-size:13px; color:#888; margin:12px 0 4px; }
+.login-box input { width:100%; padding:10px 14px; background:#16213e; border:1px solid #2a2a4a; border-radius:8px; color:#e0e0e0; font-size:15px; outline:none; transition:.2s; }
+.login-box input:focus { border-color:#6c5ce7; }
+.login-btn { width:100%; padding:12px; margin-top:20px; background:#6c5ce7; border:none; border-radius:8px; color:#fff; font-size:16px; cursor:pointer; transition:.2s; }
+.login-btn:hover { background:#5a4bd1; }
+.login-tip { text-align:center; margin-top:12px; font-size:13px; color:#e74c3c; min-height:20px; }
+
+/* Admin page */
+.admin-header { background:#1a1a2e; padding:14px 24px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid #2a2a4a; }
+.admin-header h1 { font-size:18px; }
+.conn-status { font-size:13px; }
+
+.dashboard { display:flex; gap:16px; padding:16px; }
+.sidebar { width:240px; flex-shrink:0; }
+.main-panel { flex:1; min-width:0; display:flex; flex-direction:column; gap:16px; }
+
+.stat-card { background:#1a1a2e; border-radius:10px; padding:16px; text-align:center; margin-bottom:12px; }
+.stat-card .num { font-size:36px; font-weight:700; color:#6c5ce7; }
+.stat-card .label { font-size:13px; color:#888; margin-top:4px; }
+.stat-card .detail { font-size:12px; color:#555; margin-top:4px; }
+
+.panel-card { background:#1a1a2e; border-radius:10px; padding:16px; }
+.panel-card h3 { font-size:15px; margin-bottom:12px; }
+
+.room-tags { display:flex; flex-wrap:wrap; gap:6px; }
+.room-tag { background:#2a2a4a; padding:4px 10px; border-radius:6px; font-size:12px; }
+
+.action-btn { background:#6c5ce7; color:#fff; border:none; border-radius:6px; padding:8px 16px; font-size:13px; cursor:pointer; transition:.2s; }
+.action-btn:hover { background:#5a4bd1; }
+.danger-btn { background:#e74c3c; color:#fff; border:none; border-radius:6px; padding:8px 16px; font-size:13px; cursor:pointer; transition:.2s; }
+.danger-btn:hover { background:#c0392b; }
+.warn-btn { background:#f39c12; color:#fff; border:none; border-radius:6px; padding:8px 16px; font-size:13px; cursor:pointer; transition:.2s; }
+.warn-btn:hover { background:#e67e22; }
+
+.action-row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+.action-row input[type=text] { flex:1; min-width:120px; padding:8px 12px; background:#16213e; border:1px solid #2a2a4a; border-radius:6px; color:#e0e0e0; font-size:13px; outline:none; }
+.action-row input[type=text]:focus { border-color:#6c5ce7; }
+
+.user-list { max-height:400px; overflow-y:auto; }
+.user-item { display:flex; align-items:center; justify-content:space-between; padding:8px 12px; border-bottom:1px solid #2a2a4a; transition:.2s; }
+.user-item:hover { background:#16213e; }
+.user-info { display:flex; align-items:center; gap:8px; }
+.user-info .dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+.user-info .name { font-size:14px; }
+.user-info .uid { font-size:11px; color:#555; }
+.badge-admin { background:#6c5ce7; color:#fff; font-size:10px; padding:2px 6px; border-radius:4px; }
+.badge-muted { background:#e74c3c; color:#fff; font-size:10px; padding:2px 6px; border-radius:4px; }
+.user-actions { display:flex; gap:6px; }
+.btn-mute { background:#f39c12; color:#fff; border:none; border-radius:4px; padding:4px 10px; font-size:11px; cursor:pointer; }
+.btn-mute:hover { background:#e67e22; }
+.btn-unmute { background:#2ecc71; color:#fff; border:none; border-radius:4px; padding:4px 10px; font-size:11px; cursor:pointer; }
+.btn-unmute:hover { background:#27ae60; }
+.btn-kick { background:#e74c3c; color:#fff; border:none; border-radius:4px; padding:4px 10px; font-size:11px; cursor:pointer; }
+.btn-kick:hover { background:#c0392b; }
+
+/* Action buttons for logcards */
+.log-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
+
+/* Defense / Attack / Cheat logs */
+.defense-list, .attack-list, .cheat-list { max-height:300px; overflow-y:auto; font-size:13px; }
+.defense-item { padding:8px 10px; border-bottom:1px solid #2a2a4a; line-height:1.6; }
+.defense-item:hover { background:#16213e; }
+.d-time { color:#555; font-size:11px; }
+.d-action { color:#6c5ce7; font-weight:600; }
+.d-user { color:#f39c12; }
+.d-detail { color:#aaa; word-break:break-all; }
+.d-risk-high { color:#e74c3c; font-weight:600; }
+.d-risk-mid { color:#f39c12; font-weight:600; }
+.d-risk-low { color:#2ecc71; }
+.d-result { color:#f39c12; }
+.defense-empty { color:#555; text-align:center; padding:20px; font-size:13px; }
+.cheat-item { padding:8px 10px; border-bottom:1px solid #2a2a4a; line-height:1.6; }
+.cheat-item:hover { background:#16213e; }
+
+.log-area { max-height:200px; overflow-y:auto; font-size:12px; padding:4px 0; }
+.log-area div { padding:2px 8px; }
+.log-time { color:#555; }
+.log-ok { color:#2ecc71; }
+.log-err { color:#e74c3c; }
+
+/* AI status */
+.ai-status { display:flex; align-items:center; gap:10px; margin-bottom:10px; padding:10px; background:#16213e; border-radius:8px; }
+.ai-status .ai-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+.ai-status .ai-dot.online { background:#2ecc71; }
+.ai-status .ai-dot.offline { background:#e74c3c; }
+.ai-status .ai-label { font-size:13px; }
+.ai-status .ai-model { font-size:11px; color:#555; }
+
+/* Stats grid row */
+.stats-row { display:flex; gap:12px; margin-bottom:12px; }
+.stat-box { flex:1; background:#16213e; border-radius:8px; padding:14px; text-align:center; }
+.stat-box .num { font-size:28px; font-weight:700; }
+.stat-box .label { font-size:11px; color:#888; margin-top:2px; }
+.stat-box.attack-stat .num { color:#e74c3c; }
+.stat-box.defense-stat .num { color:#6c5ce7; }
+.stat-box.cheat-stat .num { color:#f39c12; }
+
+@media(max-width:768px) {
+    .dashboard { flex-direction:column; }
+    .sidebar { width:100%; }
+    .stats-row { flex-wrap:wrap; }
+    .stat-box { min-width:100px; }
+}
+</style>
+</head>
+<body>
+
+<!-- ====== 登录页 ====== -->
+<div class="login-page" id="loginPage">
+<div class="login-box" style="text-align:center">
+<div style="font-size:32px;margin-bottom:4px">🛡️</div>
+<h2 style="font-size:14px;color:#6c5ce7;margin-bottom:4px;font-weight:700;letter-spacing:2px">BIFE 防御盾 v3.0beta</h2>
+<div style="font-size:10px;color:#555;margin-bottom:16px;letter-spacing:1px">━━ AI 智能安全防护 ━━</div>
+<h2>🔐 管理员后台</h2>
+<label>用户名</label>
+<input type="text" id="username" value="admin" autofocus>
+<label>密码</label>
+<input type="password" id="password" onkeydown="if(event.key==='Enter')doLogin()">
+<button class="login-btn" onclick="doLogin()">登录</button>
+<div class="login-tip" id="loginTip"></div>
+</div>
+</div>
+
+<!-- ====== 管理页面 ====== -->
+<div id="adminPage" style="display:none">
+
+<div class="admin-header">
+<h1>🔧 后台管理 <span id="adminBifeBadge" style="display:inline-flex;align-items:center;gap:4px;background:linear-gradient(135deg,#6c5ce7,#a29bfe);color:#fff;padding:2px 10px;border-radius:4px;font-size:12px;font-weight:700;margin-left:8px;vertical-align:middle">🛡️ BIFE v3.0β</span></h1>
+<div>
+<span class="conn-status" id="connStatus" style="color:#e74c3c">● 未连接</span>
+<button class="action-btn" onclick="doRefresh()" style="margin-left:10px;padding:6px 14px;font-size:12px">🔄 刷新</button>
+<button class="warn-btn" id="reconnectBtn" onclick="manualReconnect()" style="margin-left:6px;padding:6px 14px;font-size:12px;display:none">🔗 重新连接</button>
+</div>
+</div>
+
+<div class="dashboard">
+<!-- 侧栏 -->
+<div class="sidebar">
+<div class="stat-card">
+<div class="num" id="onlineCount">0</div>
+<div class="label">当前在线</div>
+<div class="detail" id="uptimeDisplay">运行中...</div>
+</div>
+<div class="panel-card" style="padding:14px">
+<h3 style="font-size:14px;margin-bottom:10px">⚡ 快速操作</h3>
+<button class="action-btn" onclick="doRefresh()" style="width:100%;margin-bottom:8px">🔄 刷新数据</button>
+<div style="display:flex;gap:6px;margin-bottom:8px">
+    <button class="warn-btn" onclick="doMuteAll()" style="flex:1;font-size:12px;padding:8px 4px">🔇 一键禁言</button>
+    <button class="action-btn" onclick="doUnmuteAll()" style="flex:1;font-size:12px;padding:8px 4px">🔊 解除禁言</button>
+</div>
+<button class="danger-btn" onclick="doShutdown()" style="width:100%">🛑 关闭服务器</button>
+</div>
+</div>
+
+<!-- 主面板 -->
+<div class="main-panel">
+
+<!-- ===== 在线用户 ===== -->
+<div class="panel-card">
+<h3>👥 在线用户 <span id="userCount" style="color:#888;font-size:13px"></span></h3>
+<div class="user-list" id="userList">
+<div class="defense-empty">暂无数据</div>
+</div>
+</div>
+
+<!-- ===== 公告广播 ===== -->
+<div class="panel-card">
+<h3>📢 发布公告</h3>
+<div class="action-row">
+<input type="text" id="announcement" placeholder="输入公告内容..." onkeydown="if(event.key==='Enter')doBroadcast()">
+<button class="action-btn" onclick="doBroadcast()">发布公告</button>
+</div>
+</div>
+
+<!-- ===== AI 防御中心 ===== -->
+<div class="panel-card">
+<h3>🤖 AI 防御中心</h3>
+<div class="ai-status">
+<span class="ai-dot online" id="aiDot"></span>
+<span class="ai-label" id="aiLabel">AI 协同防御</span>
+<span class="ai-model" id="aiModel">模型: gemma3+phi3 (协同)</span>
+</div>
+<div class="stats-row">
+<div class="stat-box defense-stat"><div class="num" id="defenseCount">0</div><div class="label">AI拦截</div></div>
+<div class="stat-box attack-stat"><div class="num" id="attackCount">0</div><div class="label">攻击检测</div></div>
+<div class="stat-box cheat-stat"><div class="num" id="cheatCount">0</div><div class="label">外挂检测</div></div>
+</div>
+<div class="log-header">
+<span style="font-size:13px;color:#888;">🛡️ AI 防御日志（不良内容检测）</span>
+<div class="action-row">
+<button class="action-btn" style="font-size:11px;padding:4px 12px" onclick="sendMsg({type:'admin_info'})">🔄</button>
+<button class="danger-btn" style="font-size:11px;padding:4px 12px" onclick="if(confirm('清空防御日志？'))sendMsg({type:'admin_clear_log'})">🗑️</button>
+</div>
+</div>
+<div class="defense-list" id="defenseList"><div class="defense-empty">暂无拦截记录</div></div>
+</div>
+
+<!-- ===== BIFE防御盾专属面板 ===== -->
+<div class="panel-card" style="border-left:3px solid #6c5ce7">
+<div style="display:flex;align-items:center;gap:12px;flex-wrap:nowrap;overflow-x:auto">
+  <span style="font-size:20px;flex-shrink:0">🛡️</span>
+  <div style="flex-shrink:0">
+    <span style="font-weight:700;font-size:13px">BIFE</span>
+    <span style="font-size:10px;color:#6c5ce7">v<span id="bifeVersion">2.0</span></span>
+  </div>
+  <span id="bifeStatusBadge" style="font-size:10px;background:#2ecc71;color:#000;padding:1px 8px;border-radius:8px;font-weight:600;flex-shrink:0">运行中</span>
+  <span style="font-size:10px;color:#555;flex-shrink:0" id="bifeModel">规则+AI</span>
+  <span id="bifeOllamaStatus" style="font-size:10px;flex-shrink:0">🤖 <span id="bifeOllamaState" style="color:#2ecc71;font-weight:600">已开启</span></span>
+  <div style="width:1px;height:20px;background:#2a2a4a;flex-shrink:0"></div>
+  <div style="display:flex;gap:6px;flex-shrink:0">
+    <div class="stat-box defense-stat" style="padding:3px 8px;flex:none"><div class="num" id="bifeScanned" style="font-size:14px">0</div><div class="label" style="font-size:9px">扫描</div></div>
+    <div class="stat-box attack-stat" style="padding:3px 8px;flex:none"><div class="num" id="bifeBlocked" style="font-size:14px">0</div><div class="label" style="font-size:9px">拦截</div></div>
+    <div class="stat-box cheat-stat" style="padding:3px 8px;flex:none"><div class="num" id="bifeThreats" style="font-size:14px">0</div><div class="label" style="font-size:9px">威胁</div></div>
+    <div class="stat-box" style="padding:3px 8px;flex:none"><div class="num" id="bifeAiScanned" style="font-size:14px">0</div><div class="label" style="font-size:9px">AI</div></div>
+  </div>
+  <div style="width:1px;height:20px;background:#2a2a4a;flex-shrink:0"></div>
+  <div style="display:flex;gap:4px;font-size:10px;flex-shrink:0">
+    <span style="color:#555">载荷</span><span id="rule_maxPayload" style="color:#2ecc71">100KB</span>
+    <span style="color:#555">房间</span><span id="rule_maxRoomName" style="color:#2ecc71">50</span>
+    <span style="color:#555">文件</span><span id="rule_maxFileData" style="color:#2ecc71">50KB</span>
+    <span style="color:#555">消息</span><span id="rule_rateMessages" style="color:#2ecc71">15/10s</span>
+    <span style="color:#555">私聊</span><span id="rule_ratePrivate" style="color:#2ecc71">20/10s</span>
+  </div>
+  <div style="width:1px;height:20px;background:#2a2a4a;flex-shrink:0"></div>
+  <div style="display:flex;gap:4px;flex-shrink:0">
+    <button class="action-btn" style="font-size:10px;padding:2px 8px" onclick="toggleBife('bife')">🔒 B</button>
+    <button class="warn-btn" style="font-size:10px;padding:2px 8px" onclick="toggleBife('ollama')">🤖 O</button>
+    <button class="action-btn" style="font-size:10px;padding:2px 8px" onclick="sendMsg({type:'admin_info'})">🔄</button>
+    <button class="danger-btn" style="font-size:10px;padding:2px 8px" onclick="if(confirm('清空BIFE日志？'))sendMsg({type:'admin_clear_bife_log'})">🗑️</button>
+  </div>
+  <div style="display:flex;gap:4px;font-size:10px;flex-shrink:0;color:#555" id="bifeEventCount">0事件</div>
+</div>
+<div class="defense-list" id="bifeEventList" style="max-height:80px;margin-top:6px">
+  <div class="defense-empty">暂无BIFE事件</div>
+</div>
+</div>
+
+<!-- ===== 网络攻击日志 ===== -->
+<div class="panel-card">
+<h3>⚠️ 网络攻击检测</h3>
+<p style="font-size:12px;color:#888;margin-bottom:10px">检测SQL注入、XSS、命令注入、爬虫扫描等恶意行为</p>
+<div class="log-header">
+<span style="font-size:13px;color:#888;">🔴 攻击日志</span>
+<div class="action-row">
+<button class="action-btn" style="font-size:11px;padding:4px 12px" onclick="sendMsg({type:'admin_info'})">🔄</button>
+<button class="danger-btn" style="font-size:11px;padding:4px 12px" onclick="if(confirm('清空攻击日志？'))sendMsg({type:'admin_clear_attack_log'})">🗑️</button>
+</div>
+</div>
+<div class="attack-list" id="attackList"><div class="defense-empty">暂无攻击记录</div></div>
+</div>
+
+<!-- ===== 外挂检测日志 ===== -->
+<div class="panel-card">
+<h3>🎯 反外挂检测</h3>
+<p style="font-size:12px;color:#888;margin-bottom:10px">检测自动刷屏、脚本行为、数据篡改等作弊行为</p>
+<div class="log-header">
+<span style="font-size:13px;color:#888;">📋 外挂日志</span>
+<div class="action-row">
+<button class="action-btn" style="font-size:11px;padding:4px 12px" onclick="sendMsg({type:'admin_info'})">🔄</button>
+<button class="danger-btn" style="font-size:11px;padding:4px 12px" onclick="if(confirm('清空外挂日志？'))sendMsg({type:'admin_clear_cheat_log'})">🗑️</button>
+</div>
+</div>
+<div class="cheat-list" id="cheatList"><div class="defense-empty">暂无外挂记录</div></div>
+</div>
+
+<!-- ===== 操作日志 ===== -->
+<div class="panel-card">
+<h3>📋 被封禁设备</h3>
+<div class="banned-ip-list" id="bannedIpList"><div class="defense-empty">暂无被封禁设备</div></div>
+</div>
+
+<div class="panel-card">
+<h3>📋 操作日志</h3>
+<div class="log-area" id="logArea">
+<div class="defense-empty">等待操作...</div>
+</div>
+</div>
+
+</div>
+</div>
+</div>
+
+<script>
+// ============ 配置 ============
+const SERVER_URL = (() => {
+    const loc = window.location;
+    return (loc.protocol === 'https:' ? 'wss:' : 'ws:') + '//' + loc.host + '/';
+})();
+
+let ws = null;
+let authed = false;
+let gracefulClose = false;
+let autoReconnectTimer = null;
+
+// ============ 连接 WebSocket ============
+function connectWS() {
+    if (ws) { try { ws.close(); } catch(e) {} }
+    if (autoReconnectTimer) { clearTimeout(autoReconnectTimer); autoReconnectTimer = null; }
+    try { ws = new WebSocket(SERVER_URL); } catch(e) {
+        log('连接失败: ' + e.message, 'err');
+        scheduleReconnect();
+        return;
+    }
+    ws.onopen = () => {
+        document.getElementById('connStatus').textContent = '● 已连接';
+        document.getElementById('connStatus').style.color = '#2ecc71';
+        document.getElementById('reconnectBtn').style.display = 'none';
+    };
+    ws.onmessage = (ev) => {
+        try { handleMessage(JSON.parse(ev.data)); } catch(e) {
+            const preview = typeof ev.data === 'string' ? ev.data.substring(0,200) : typeof ev.data;
+            log('解析失败: ' + e.message + ' | 前200字符: ' + preview, 'err');
+        }
+    };
+    ws.onclose = () => {
+        document.getElementById('connStatus').textContent = '● 已断开';
+        document.getElementById('connStatus').style.color = '#e74c3c';
+        if (authed) {
+            authed = false;
+            log('⚠️ 连接已断开，正在自动重连...', 'err');
+        }
+        document.getElementById('reconnectBtn').style.display = 'inline-block';
+        if (!gracefulClose) {
+            scheduleReconnect();
+        }
+    };
+    ws.onerror = () => {
+        document.getElementById('connStatus').textContent = '● 连接错误';
+        document.getElementById('connStatus').style.color = '#e74c3c';
+    };
+}
+
+function scheduleReconnect() {
+    if (autoReconnectTimer) return;
+    autoReconnectTimer = setTimeout(() => {
+        autoReconnectTimer = null;
+        if (!ws || ws.readyState === 3) { // CLOSED
+            connectWS();
+        }
+    }, 5000);
+}
+
+function manualReconnect() {
+    gracefulClose = false;
+    if (autoReconnectTimer) { clearTimeout(autoReconnectTimer); autoReconnectTimer = null; }
+    document.getElementById('reconnectBtn').style.display = 'none';
+    connectWS();
+}
+
+// ============ 消息处理 ============
+function handleMessage(msg) {
+    switch (msg.type) {
+        case 'welcome':
+            sendMsg({ type: 'auth', username: document.getElementById('username').value, password: document.getElementById('password').value });
+            break;
+        case 'admin_auth_ok':
+            authed = true; gracefulClose = false;
+            document.getElementById('loginPage').style.display = 'none';
+            document.getElementById('adminPage').style.display = 'block';
+            log('✅ 管理员登录成功', 'ok');
+            sendMsg({ type: 'admin_info' });
+            break;
+        case 'admin_info_result':
+            updateDashboard(msg.data);
+            break;
+        case 'admin_result':
+            log('✅ ' + msg.message, 'ok');
+            sendMsg({ type: 'admin_info' });
+            break;
+        case 'error':
+            if (!authed) {
+                document.getElementById('loginTip').textContent = '❌ ' + msg.message;
+            } else {
+                log('❌ ' + msg.message, 'err');
+            }
+            break;
+        case 'user_list':
+            if (authed) sendMsg({ type: 'admin_info' });
+            break;
+        case 'admin_bife_config_result':
+            log('✅ BIFE配置已更新', 'ok');
+            sendMsg({ type: 'admin_info' });
+            break;
+        case 'admin_bife_log_cleared':
+            log('✅ BIFE事件日志已清空', 'ok');
+            sendMsg({ type: 'admin_info' });
+            break;
+        case 'admin_bife_config_result':
+            log('✅ BIFE配置已更新', 'ok');
+            break;
+    }
+}
+
+// ============ 更新仪表盘 ============
+function updateDashboard(data) {
+    document.getElementById('onlineCount').textContent = data.onlineCount || 0;
+    const uptime = data.uptime || 0;
+    const h = Math.floor(uptime / 3600);
+    const m = Math.floor((uptime % 3600) / 60);
+    const s = Math.floor(uptime % 60);
+    document.getElementById('uptimeDisplay').textContent = '运行 ' + h + 'h ' + m + 'm ' + s + 's';
+
+    // 统计计数
+    document.getElementById('defenseCount').textContent = (data.defenseLog || []).length;
+    document.getElementById('attackCount').textContent = (data.attackLog || []).length;
+    document.getElementById('cheatCount').textContent = (data.cheatLog || []).length;
+
+    // 用户列表
+    const userListEl = document.getElementById('userList');
+    document.getElementById('userCount').textContent = (data.users || []).length > 0 ? '共 ' + data.users.length + ' 人' : '';
+    if (data.users && data.users.length > 0) {
+        userListEl.innerHTML = data.users.map(u => {
+            const badge = u.admin ? '<span class="badge-admin">👑 管理</span>' :
+                         u.muted ? '<span class="badge-muted">🔇 禁言</span>' : '';
+            const actions = u.admin ? `<span style="font-size:10px;color:#888;font-style:italic">（管理员账号）</span>` : `
+                <div class="user-actions">
+                    ${u.muted ?
+                        `<button class="btn-unmute" onclick="sendMsg({type:'admin_unmute',targetId:${u.id}})">🔊 解除</button>` :
+                        `<button class="btn-mute" onclick="doMute(${u.id},'${u.name.replace(/'/g,"\\'")}')">🔇 禁言</button>`
+                    }
+                    <button class="btn-ban" onclick="doBan(${u.id},'${u.name.replace(/'/g,"\\'")}')">🚫封号</button>
+                    <button class="btn-unban" onclick="doUnbanByName('${u.name.replace(/'/g,"\\'")}')">🔓 解封</button>
+                </div>`;
+            return `<div class="user-item">
+                <div class="user-info">
+                    <span class="dot" style="background:${u.color || '#888'}"></span>
+                    <span class="name" style="color:${u.color || '#e0e0e0'}">${escapeHtml(u.name)}</span>
+                    <span class="uid">#${u.id}</span>
+                    ${badge}
+                </div>
+                ${actions}
+            </div>`;
+        }).join('');
+    } else {
+        userListEl.innerHTML = '<div class="defense-empty">暂无在线用户</div>';
+    }
+
+    // BIFE 防御盾面板
+    if (data.bife) {
+        const b = data.bife;
+        document.getElementById('bifeVersion').textContent = b.version || '2.0';
+        document.getElementById('bifeScanned').textContent = (b.stats && b.stats.scanned) || 0;
+        document.getElementById('bifeBlocked').textContent = (b.stats && b.stats.blocked) || 0;
+        document.getElementById('bifeAiScanned').textContent = (b.stats && b.stats.aiScanned) || 0;
+        document.getElementById('bifeThreats').textContent = (b.stats && b.stats.threatsBlocked) || 0;
+        const badge = document.getElementById('bifeStatusBadge');
+        if (b.enabled) {
+            badge.textContent = '运行中';
+            badge.style.background = '#2ecc71';
+        } else {
+            badge.textContent = '已关闭';
+            badge.style.background = '#e74c3c';
+        }
+        const oState = document.getElementById('bifeOllamaState');
+        if (b.ollama && b.ollama.enabled) {
+            oState.textContent = '已开启';
+            oState.style.color = '#2ecc71';
+        } else {
+            oState.textContent = '关闭';
+            oState.style.color = '#e74c3c';
+        }
+    document.getElementById('rule_maxPayload').textContent = (b.config && b.config.maxPayload ? Math.round(b.config.maxPayload/1024) : 100) + 'KB';
+    document.getElementById('rule_maxRoomName').textContent = (b.config && b.config.maxRoomName) || 50;
+    document.getElementById('rule_maxFileData').textContent = (b.config && b.config.maxFileData ? Math.round(b.config.maxFileData/1024) : 50) + 'KB';
+    if (b.config && b.config.rateLimit) {
+        document.getElementById('rule_rateMessages').textContent = b.config.rateLimit.maxMessages + '/' + (b.config.rateLimit.window/1000) + 's';
+        document.getElementById('rule_ratePrivate').textContent = b.config.rateLimit.maxPrivate + '/' + (b.config.rateLimit.window/1000) + 's';
+    }
+    // 双AI模型状态
+    if (b.ollama && b.ollama.models) {
+        const models = b.ollama.models || [];
+        const activeModels = models.filter(m => m.enabled).map(m => m.name.split(':')[0]);
+        const strategy = b.ollama.strategy || 'consensus';
+        const aiLabel = document.getElementById('aiLabel');
+        const aiModel = document.getElementById('aiModel');
+        const aiDot = document.getElementById('aiDot');
+        if (b.ollama.enabled && activeModels.length > 0) {
+            aiLabel.textContent = `AI 协同防御 (${activeModels.length}个模型)`;
+            aiModel.textContent = `模型: ${activeModels.join(' + ')} | 策略: ${strategy}`;
+            aiDot.className = 'ai-dot online';
+        } else {
+            aiLabel.textContent = 'AI 引擎已关闭';
+            aiModel.textContent = '';
+            aiDot.className = 'ai-dot offline';
+        }
+    }
+    }
+
+    // AI 防御日志
+    const defenseListEl = document.getElementById('defenseList');
+    if (data.defenseLog && data.defenseLog.length > 0) {
+        defenseListEl.innerHTML = data.defenseLog.slice().reverse().map(e => {
+            const resultColor = e.result && (e.result.includes('通过') || e.result.includes('不可用'))
+                ? '#2ecc71' : '#e74c3c';
+            return `
+            <div class="defense-item">
+                <div><span class="d-time">[${escapeHtml(e.time || '')}]</span> <span class="d-action">${escapeHtml(e.action)}</span></div>
+                ${e.user ? `<div>用户：<span class="d-user">${escapeHtml(e.user)}</span> <span class="d-time">${e.id || ''}</span></div>` : ''}
+                ${e.target ? `<div>目标：<span class="d-user">${escapeHtml(e.target)}</span></div>` : ''}
+                ${e.detail ? `<div>内容：<span class="d-detail">${escapeHtml(e.detail)}</span></div>` : ''}
+                ${e.result ? `<div class="d-result" style="color:${resultColor}">${e.result.includes('通过') ? '✅' : e.result.includes('不可用') ? '⚠️' : '🚫'} 结果：${escapeHtml(e.result)}</div>` : ''}
+                ${e.aiModel ? `<div style="color:#555;font-size:11px">模型：${escapeHtml(e.aiModel)}</div>` : ''}
+            </div>
+        `}).join('');
+    } else {
+        defenseListEl.innerHTML = '<div class="defense-empty">暂无拦截记录</div>';
+    }
+
+    // BIFE 事件日志
+    const bifeEventListEl = document.getElementById('bifeEventList');
+    const bifeEventCountEl = document.getElementById('bifeEventCount');
+    if (data.bifeEventLog && data.bifeEventLog.length > 0) {
+        bifeEventCountEl.textContent = data.bifeEventLog.length + '事件';
+        bifeEventListEl.innerHTML = data.bifeEventLog.slice().reverse().map(e => {
+            const typeIcon = e.type === 'pass' ? '✅' : e.type === 'threat' ? '🚫' : e.type === 'block' ? '🔒' : '📝';
+            const typeColor = e.type === 'pass' ? '#2ecc71' : '#e74c3c';
+            return `<div class="defense-item" style="font-size:11px;padding:4px 8px">
+                <span class="d-time">[${escapeHtml(e.time || '')}]</span>
+                <span style="color:${typeColor}">${typeIcon} ${escapeHtml(e.label)}</span>
+                <span style="color:#888">${escapeHtml(e.detail)}</span>
+                <span class="${e.risk === '高' ? 'd-risk-high' : e.risk === '中' ? 'd-risk-mid' : 'd-risk-low'}">[${escapeHtml(e.risk || '中')}]</span>
+            </div>`;
+        }).join('');
+    } else {
+        bifeEventCountEl.textContent = '0事件';
+        bifeEventListEl.innerHTML = '<div class="defense-empty">暂无BIFE事件</div>';
+    }
+
+    // 攻击日志
+    const attackListEl = document.getElementById('attackList');
+    if (data.attackLog && data.attackLog.length > 0) {
+        attackListEl.innerHTML = data.attackLog.slice().reverse().map(e => `
+            <div class="defense-item">
+                <div>
+                    <span class="d-time">[${escapeHtml(e.time || '')}]</span>
+                    <span class="d-action">${escapeHtml(e.action)}</span>
+                    <span class="${e.risk === '高' ? 'd-risk-high' : e.risk === '中' ? 'd-risk-mid' : 'd-risk-low'}">[${escapeHtml(e.risk)}]</span>
+                </div>
+                ${e.user ? `<div>用户：<span class="d-user">${escapeHtml(e.user)}</span> <span class="d-time">${e.id || ''}</span> IP: <span style="color:#555;font-size:11px">${escapeHtml(e.ip || '')}</span></div>` : ''}
+                ${e.detail ? `<div>详情：<span class="d-detail">${escapeHtml(e.detail)}</span></div>` : ''}
+                ${e.content ? `<div style="color:#888;font-size:11px">原始内容：${escapeHtml(e.content)}</div>` : ''}
+            </div>
+        `).join('');
+    } else {
+        attackListEl.innerHTML = '<div class="defense-empty">暂无攻击记录</div>';
+    }
+
+    // 外挂日志
+    const cheatListEl = document.getElementById('cheatList');
+    if (data.cheatLog && data.cheatLog.length > 0) {
+        cheatListEl.innerHTML = data.cheatLog.slice().reverse().map(e => `
+            <div class="cheat-item">
+                <div>
+                    <span class="d-time">[${escapeHtml(e.time || '')}]</span>
+                    <span class="d-action">${escapeHtml(e.action)}</span>
+                    <span class="${e.risk === '高' ? 'd-risk-high' : 'd-risk-mid'}">[${escapeHtml(e.risk || '中')}]</span>
+                </div>
+                ${e.user ? `<div>用户：<span class="d-user">${escapeHtml(e.user)}</span> <span class="d-time">${e.id || ''}</span> IP: <span style="color:#555;font-size:11px">${escapeHtml(e.ip || '')}</span></div>` : ''}
+                ${e.detail ? `<div>详情：<span class="d-detail">${escapeHtml(e.detail)}</span></div>` : ''}
+                ${e.evidence ? `<div style="color:#888;font-size:11px">证据：${escapeHtml(e.evidence)}</div>` : ''}
+            </div>
+        `).join('');
+    } else {
+        cheatListEl.innerHTML = '<div class="defense-empty">暂无外挂记录</div>';
+    }
+
+    // 被封禁设备列表 (machine code)
+    const bannedIpListEl = document.getElementById('bannedIpList');
+    const bannedMachines = (data.bannedMachines || []).concat(data.bannedIps || []);
+    if (bannedMachines.length > 0) {
+        bannedIpListEl.innerHTML = bannedMachines.map(b => {
+            const now = Date.now();
+            let timeStr = '';
+            if (b.bannedUntil) {
+                const remain = Math.ceil((b.bannedUntil - now) / 1000);
+                if (remain > 0) timeStr = `（剩余 ${Math.ceil(remain/60)} 分钟）`;
+                else timeStr = '（已过期）';
+            } else {
+                timeStr = '（永久）';
+            }
+            const mc = b.machineCode || b.ip || '未知';
+            const displayMc = mc.length > 8 ? mc.slice(0,8) + '...' : mc;
+            const userName = b.userName || '';
+            return `<div class="defense-item" style="display:flex;justify-content:space-between;align-items:center">
+                <div>
+                    <span class="d-time">🖥️ ${escapeHtml(displayMc)}</span>
+                    ${userName ? `<span style="color:#e0e0f0;font-size:11px"> | ${escapeHtml(userName)}</span>` : ''}
+                    <span style="color:#e74c3c;font-size:11px">${timeStr}</span>
+                    <div style="font-size:11px;color:#888">
+                        原因: ${escapeHtml(b.reason || '无')}
+                        ${b.bannedBy ? ` | 操作人: ${escapeHtml(b.bannedBy)}` : ''}
+                    </div>
+                </div>
+                <button class="action-btn" style="font-size:10px;padding:2px 8px" onclick="doUnban('${escapeHtml(mc)}')">🔓 解封</button>
+            </div>`;
+        }).join('');
+    } else {
+        bannedIpListEl.innerHTML = '<div class="defense-empty">暂无被封禁设备</div>';
+    }
+}
+
+// ============ 管理员操作 ============
+function doLogin() {
+    const username = document.getElementById('username').value.trim();
+    const password = document.getElementById('password').value.trim();
+    if (!username || !password) {
+        document.getElementById('loginTip').textContent = '请输入用户名和密码';
+        return;
+    }
+    document.getElementById('loginTip').textContent = '正在连接...';
+    document.getElementById('loginTip').style.color = '#888';
+    // 优雅关闭旧连接
+    gracefulClose = true;
+    connectWS();
+}
+
+function doBan(userId, userName) {
+    // 创建自定义弹窗
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.7);z-index:9999;display:flex;align-items:center;justify-content:center';
+    const box = document.createElement('div');
+    box.style.cssText = 'background:#232540;border-radius:12px;padding:24px;min-width:340px;max-width:90%;box-shadow:0 20px 60px rgba(0,0,0,.5)';
+    box.innerHTML = `
+        <div style="font-size:18px;font-weight:600;margin-bottom:16px;text-align:center">🚫 封号 ${escapeHtml(userName)}</div>
+        <label style="display:block;font-size:13px;color:#9898b8;margin-bottom:6px">封号时长：</label>
+        <select id="banDurationSelect" style="width:100%;padding:10px;background:#1a1b2e;border:1px solid #363a5a;border-radius:8px;color:#e0e0f0;font-size:14px;margin-bottom:16px">
+            <option value="1440">1 天</option>
+            <option value="43200">30 天</option>
+            <option value="525600">1 年</option>
+            <option value="5256000">10 年</option>
+            <option value="0">永久</option>
+        </select>
+        <label style="display:block;font-size:13px;color:#9898b8;margin-bottom:6px">封禁原因：</label>
+        <input type="text" id="banReasonInput" value="违规操作" style="width:100%;padding:10px;background:#1a1b2e;border:1px solid #363a5a;border-radius:8px;color:#e0e0f0;font-size:14px;margin-bottom:16px;outline:none">
+        <div style="display:flex;gap:12px;justify-content:center">
+            <button id="banCancelBtn" style="padding:10px 24px;border:1px solid #363a5a;border-radius:8px;background:transparent;color:#e0e0f0;cursor:pointer;font-size:14px">取消</button>
+            <button id="banConfirmBtn" style="padding:10px 24px;border:none;border-radius:8px;background:#e74c3c;color:#fff;cursor:pointer;font-size:14px;font-weight:600">确定封号</button>
+        </div>
+    `;
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+    document.getElementById('banCancelBtn').onclick = () => overlay.remove();
+    document.getElementById('banConfirmBtn').onclick = () => {
+        const val = parseInt(document.getElementById('banDurationSelect').value);
+        const reason = document.getElementById('banReasonInput').value.trim() || '违规操作';
+        overlay.remove();
+        sendMsg({ type: 'admin_ban', targetId: userId, duration: val, reason: reason });
+        const timeStr = val > 0 ? getBanDurationStr(val) : '永久';
+        log('🚫 封禁 ' + userName + ' ' + timeStr, 'ok');
+    };
+}
+
+function getBanDurationStr(minutes) {
+    if (minutes >= 525600) return Math.floor(minutes/525600) + '年';
+    if (minutes >= 43200) return Math.floor(minutes/43200) + '个月';
+    if (minutes >= 1440) return Math.floor(minutes/1440) + '天';
+    return minutes + '分钟';
+}
+
+function doMute(userId, userName) {
+    // 创建自定义弹窗
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.7);z-index:9999;display:flex;align-items:center;justify-content:center';
+    const box = document.createElement('div');
+    box.style.cssText = 'background:#232540;border-radius:12px;padding:24px;min-width:320px;max-width:90%;box-shadow:0 20px 60px rgba(0,0,0,.5)';
+    box.innerHTML = `
+        <div style="font-size:18px;font-weight:600;margin-bottom:16px;text-align:center">🔇 禁言 ${escapeHtml(userName)}</div>
+        <label style="display:block;font-size:13px;color:#9898b8;margin-bottom:6px">禁言时长：</label>
+        <select id="muteDurationSelect" style="width:100%;padding:10px;background:#1a1b2e;border:1px solid #363a5a;border-radius:8px;color:#e0e0f0;font-size:14px;margin-bottom:16px">
+            <option value="10">10 分钟</option>
+            <option value="30">30 分钟</option>
+            <option value="60">1 小时</option>
+            <option value="720">12 小时</option>
+            <option value="1440">1 天</option>
+            <option value="-1">永久</option>
+        </select>
+        <div style="display:flex;gap:12px;justify-content:center">
+            <button id="muteCancelBtn" style="padding:10px 24px;border:1px solid #363a5a;border-radius:8px;background:transparent;color:#e0e0f0;cursor:pointer;font-size:14px">取消</button>
+            <button id="muteConfirmBtn" style="padding:10px 24px;border:none;border-radius:8px;background:#e17055;color:#fff;cursor:pointer;font-size:14px;font-weight:600">确定禁言</button>
+        </div>
+    `;
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+    document.getElementById('muteCancelBtn').onclick = () => overlay.remove();
+    document.getElementById('muteConfirmBtn').onclick = () => {
+        const val = parseInt(document.getElementById('muteDurationSelect').value);
+        overlay.remove();
+        if (val === -1) {
+            sendMsg({ type: 'admin_mute', targetId: userId, duration: 999999 });
+            log('🔇 永久禁言 ' + userName, 'ok');
+        } else {
+            sendMsg({ type: 'admin_mute', targetId: userId, duration: val });
+            log('🔇 禁言 ' + userName + ' ' + val + '分钟', 'ok');
+        }
+    };
+}
+
+function doUnmute(userId, userName) {
+    if (!confirm('确定解除 ' + userName + ' 的禁言吗？')) return;
+    sendMsg({ type: 'admin_unmute', targetId: userId });
+}
+
+// ===== 一键禁言 / 一键解除禁言 =====
+function doMuteAll() {
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.7);z-index:9999;display:flex;align-items:center;justify-content:center';
+    const box = document.createElement('div');
+    box.style.cssText = 'background:#232540;border-radius:12px;padding:24px;min-width:320px;max-width:90%;box-shadow:0 20px 60px rgba(0,0,0,.5)';
+    box.innerHTML = `
+        <div style="font-size:18px;font-weight:600;margin-bottom:16px;text-align:center">🔇 一键全员禁言</div>
+        <p style="color:#888;font-size:13px;margin-bottom:16px;text-align:center">所有非管理员用户将被禁言（已有禁言的不重复）</p>
+        <label style="display:block;font-size:13px;color:#9898b8;margin-bottom:6px">禁言时长：</label>
+        <select id="muteAllDurationSelect" style="width:100%;padding:10px;background:#1a1b2e;border:1px solid #363a5a;border-radius:8px;color:#e0e0f0;font-size:14px;margin-bottom:16px">
+            <option value="10">10 分钟</option>
+            <option value="30" selected>30 分钟</option>
+            <option value="60">1 小时</option>
+            <option value="720">12 小时</option>
+            <option value="1440">1 天</option>
+        </select>
+        <div style="display:flex;gap:12px;justify-content:center">
+            <button id="muteAllCancelBtn" style="padding:10px 24px;border:1px solid #363a5a;border-radius:8px;background:transparent;color:#e0e0f0;cursor:pointer;font-size:14px">取消</button>
+            <button id="muteAllConfirmBtn" style="padding:10px 24px;border:none;border-radius:8px;background:#e17055;color:#fff;cursor:pointer;font-size:14px;font-weight:600">确定全禁言</button>
+        </div>
+    `;
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+    document.getElementById('muteAllCancelBtn').onclick = () => overlay.remove();
+    document.getElementById('muteAllConfirmBtn').onclick = () => {
+        const val = parseInt(document.getElementById('muteAllDurationSelect').value);
+        overlay.remove();
+        sendMsg({ type: 'admin_mute_all', duration: val });
+        log('🔇 一键全员禁言 ' + val + ' 分钟', 'ok');
+    };
+}
+
+function doUnmuteAll() {
+    if (!confirm('确定解除所有用户的禁言吗？')) return;
+    sendMsg({ type: 'admin_unmute_all' });
+    log('🔊 已解除全员禁言', 'ok');
+}
+
+function doUnban(machineCode) {
+    if (!machineCode) return;
+    if (!confirm('确定解封该设备吗？')) return;
+    sendMsg({ type: 'admin_unban', machineCode: machineCode });
+    log('已解封设备: ' + machineCode.slice(0,8), 'ok');
+}
+
+function doUnbanByName(userName) {
+    if (!userName) return;
+    if (!confirm('确定解封用户 "' + userName + '" 的所有封禁吗？')) return;
+    sendMsg({ type: 'admin_unban', machineCode: userName, userName: userName });
+    log('已解封用户: ' + userName, 'ok');
+}
+
+function doBroadcast() {
+    const input = document.getElementById('announcement');
+    const content = input.value.trim();
+    if (!content) return;
+    sendMsg({ type: 'admin_broadcast', content });
+    log('发布公告: ' + content, 'ok');
+    input.value = '';
+}
+
+function doShutdown() {
+    if (!confirm('⚠️ 确定要关闭整个服务器吗？')) return;
+    if (!confirm('⚠️⚠️ 再次确认？所有用户将被断开！')) return;
+    sendMsg({ type: 'admin_shutdown' });
+}
+
+function doRefresh() {
+    if (authed) {
+        sendMsg({ type: 'admin_info' });
+        log('已刷新数据', 'ok');
+    } else {
+        log('⚠️ 未连接，请先登录', 'err');
+    }
+}
+
+// ============ BIFE 控制 ============
+function toggleBife(target) {
+    sendMsg({ type: 'admin_bife_toggle', target });
+    log('切换 BIFE.' + target, 'ok');
+}
+
+// ============ 辅助函数 ============
+function sendMsg(data) {
+    if (!ws || ws.readyState !== WebSocket.OPEN) {
+        log('连接未就绪', 'err');
+        return;
+    }
+    ws.send(JSON.stringify(data));
+}
+
+function escapeHtml(t) {
+    if (t === null || t === undefined) return '';
+    const d = document.createElement('div');
+    d.textContent = String(t);
+    return d.innerHTML;
+}
+
+function log(text, type) {
+    const area = document.getElementById('logArea');
+    const time = new Date().toLocaleTimeString();
+    const cls = type === 'ok' ? 'log-ok' : type === 'err' ? 'log-err' : '';
+    if (area.querySelector('.defense-empty')) area.innerHTML = '';
+    area.innerHTML += `<div><span class="log-time">[${time}]</span> <span class="${cls}">${escapeHtml(text)}</span></div>`;
+    area.scrollTop = area.scrollHeight;
+}
+</script>
+</body>
+</html>
