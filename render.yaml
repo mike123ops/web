@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: cloud-chat-server
+    env: node
+    buildCommand: npm install
+    startCommand: node server.js
+    envVars:
+      - key: NODE_VERSION
+        value: 20
+      # AI 防御保持开启，Ollama 连接失败时自动降级
